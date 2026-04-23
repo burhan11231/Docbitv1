@@ -1,0 +1,6 @@
+{
+  "name": "DocBit",
+  "description": "A fast, client-only, multi-tool PDF engine for instant document processing.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["PDF manipulation", "Client-side processing"]
+}
