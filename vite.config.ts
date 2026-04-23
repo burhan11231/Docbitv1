@@ -12,6 +12,10 @@ export default defineConfig(({mode}) => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
+        injectRegister: 'auto',
+        workbox: {
+          globPatterns: ['**/*.{js,css,html,ico,png,svg}']
+        },
         manifest: {
           name: 'DocBit - Precision PDF Workbench',
           short_name: 'DocBit',
@@ -19,6 +23,7 @@ export default defineConfig(({mode}) => {
           theme_color: '#2563eb',
           background_color: '#ffffff',
           display: 'standalone',
+          orientation: 'any',
           icons: [
             {
               src: 'icon.svg',
