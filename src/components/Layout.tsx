@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { motion, AnimatePresence } from 'motion/react';
-import { FileImage, Scissors, FileDown, Menu, Home as HomeIcon, FileStack } from 'lucide-react';
+import { FileImage, Scissors, FileDown, Menu, Home as HomeIcon, FileStack, Combine, Image as ImageIcon } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '../lib/utils';
 
@@ -19,8 +19,9 @@ export function Layout({ children, activeToolName, onReset }: LayoutProps) {
   const navItems = [
     { label: 'Organize', icon: <FileStack className="w-5 h-5" />, href: '/tool/organize' },
     { label: 'Img ➔ PDF', icon: <FileImage className="w-5 h-5" />, href: '/tool/img-to-pdf' },
+    { label: 'PDF ➔ Img', icon: <ImageIcon className="w-5 h-5" />, href: '/tool/pdf-to-img' },
+    { label: 'Merge', icon: <Combine className="w-5 h-5" />, href: '/tool/merge' },
     { label: 'Split', icon: <Scissors className="w-5 h-5" />, href: '/tool/split' },
-    { label: 'Compress', icon: <FileDown className="w-5 h-5" />, href: '/tool/compress' },
   ];
 
   return (
@@ -55,11 +56,13 @@ export function Layout({ children, activeToolName, onReset }: LayoutProps) {
       </AnimatePresence>
 
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden relative">
-        <Header 
-          activeToolName={activeToolName} 
-          onMenuClick={() => setIsSidebarOpen(true)} 
-          onReset={onReset}
-        />
+        <div className="md:hidden">
+          <Header 
+            activeToolName={activeToolName} 
+            onMenuClick={() => setIsSidebarOpen(true)} 
+            onReset={onReset}
+          />
+        </div>
         
         <main className="flex-1 overflow-y-auto relative p-4 md:p-6 lg:p-8 pb-40 md:pb-6">
           <div className="max-w-7xl mx-auto h-full">

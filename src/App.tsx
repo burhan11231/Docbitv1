@@ -10,8 +10,6 @@ const MergeTool = lazy(() => import('./components/tools/MergeTool'));
 const SplitTool = lazy(() => import('./components/tools/SplitTool'));
 const PdfToImgTool = lazy(() => import('./components/tools/PdfToImgTool'));
 const ImgToPdfTool = lazy(() => import('./components/tools/ImgToPdfTool'));
-const CompressTool = lazy(() => import('./components/tools/CompressTool'));
-const ResizeTool = lazy(() => import('./components/tools/ResizeTool'));
 
 export default function App() {
   const location = useLocation();
@@ -48,8 +46,6 @@ export default function App() {
           <Route path="/tool/split" element={<SplitTool />} />
           <Route path="/tool/pdf-to-img" element={<PdfToImgTool />} />
           <Route path="/tool/img-to-pdf" element={<ImgToPdfTool />} />
-          <Route path="/tool/compress" element={<CompressTool />} />
-          <Route path="/tool/resize" element={<ResizeTool />} />
         </Routes>
       </Suspense>
     </Layout>

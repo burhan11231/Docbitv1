@@ -4,8 +4,6 @@ import {
   Scissors, 
   Image as ImageIcon, 
   FileImage, 
-  FileDown, 
-  Fullscreen, 
   RotateCw
 } from 'lucide-react';
 import React from 'react';
@@ -47,14 +45,6 @@ export const TOOLS: PDFTool[] = [
     href: '/tool/pdf-to-img',
   },
   {
-    id: 'compress',
-    name: 'Compress PDF',
-    description: 'Reduce file size while optimizing for maximal quality.',
-    icon: <FileDown className="w-6 h-6" />,
-    category: 'optimize',
-    href: '/tool/compress',
-  },
-  {
     id: 'merge',
     name: 'Merge PDF',
     description: 'Combine multiple PDF files into one single document.',
@@ -69,13 +59,5 @@ export const TOOLS: PDFTool[] = [
     icon: <Scissors className="w-6 h-6" />,
     category: 'organize',
     href: '/tool/split',
-  },
-  {
-    id: 'resize',
-    name: 'Resize PDF',
-    description: 'Change page dimensions to A4, Letter, or custom sizes.',
-    icon: <Fullscreen className="w-6 h-6" />,
-    category: 'optimize',
-    href: '/tool/resize',
   },
 ];

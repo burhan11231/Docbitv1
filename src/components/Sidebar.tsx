@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { TOOLS } from '../constants/tools';
 import { cn } from '../lib/utils';
-import { LayoutGrid, ShieldCheck } from 'lucide-react';
+import { LayoutGrid, ShieldCheck, Moon, Sun } from 'lucide-react';
 
 interface SidebarProps {
   onSelect?: () => void;
@@ -10,10 +10,28 @@ interface SidebarProps {
 
 export function Sidebar({ onSelect }: SidebarProps) {
   const location = useLocation();
+  const [isDark, setIsDark] = React.useState(() => {
+    if (typeof window !== 'undefined') {
+      return document.documentElement.classList.contains('dark');
+    }
+    return false;
+  });
+
+  const toggleTheme = () => {
+    const newDark = !isDark;
+    setIsDark(newDark);
+    if (newDark) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  };
 
   return (
     <aside className="w-72 h-full bg-white dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800 flex flex-col transition-colors">
-      <div className="p-6">
+      <div className="p-6 flex items-center justify-between">
         <Link to="/" onClick={onSelect} className="flex items-center group">
           <div className="flex flex-col">
             <div className="flex items-center">
@@ -28,6 +46,14 @@ export function Sidebar({ onSelect }: SidebarProps) {
             </p>
           </div>
         </Link>
+
+        {/* Desktop Theme Toggle */}
+        <button 
+          onClick={toggleTheme}
+          className="hidden md:flex p-2 text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl transition-all"
+        >
+          {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+        </button>
       </div>
 
       <nav className="flex-1 overflow-y-auto px-4 py-2 space-y-1 scrollbar-thin scrollbar-thumb-neutral-200 dark:scrollbar-thumb-neutral-800">
