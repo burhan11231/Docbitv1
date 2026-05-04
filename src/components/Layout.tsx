@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { FileImage, Scissors, FileDown, Menu, Home as HomeIcon, Combine, Image as ImageIcon } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '../lib/utils';
+import Offline from './Offline';
+import Footer from './Footer';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -63,11 +65,16 @@ export function Layout({ children, activeToolName, onReset }: LayoutProps) {
           />
         </div>
         
-        <main className="flex-1 overflow-y-auto relative p-4 md:p-6 lg:p-8 pb-40 md:pb-6">
-          <div className="max-w-7xl mx-auto h-full">
-            {children}
+        <main className="flex-1 overflow-y-auto relative">
+          <div className="flex flex-col min-h-full">
+            <div className="flex-1 p-4 md:p-6 lg:p-8">
+              {children}
+            </div>
+            <Footer variant={location.pathname.startsWith('/tool/') ? 'minimal' : 'full'} />
           </div>
         </main>
+
+        <Offline />
 
         {/* Bottom Navigation Bar - Mobile Only */}
         <div className="md:hidden fixed bottom-0 left-0 right-0 h-18 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-xl border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-between px-2 pb-safe z-30">

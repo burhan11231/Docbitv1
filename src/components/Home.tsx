@@ -38,7 +38,7 @@ const itemVariants: Variants = {
 
 export function Home() {
   return (
-    <div className="min-h-screen bg-white dark:bg-neutral-950 transition-colors duration-500 overflow-x-hidden">
+    <div className="overflow-x-hidden">
       {/* Background Accents */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500/10 rounded-full blur-[120px] dark:bg-blue-600/5" />
@@ -251,22 +251,51 @@ export function Home() {
           </div>
         </section>
 
-        {/* FOOTER */}
-        <footer className="pt-28 border-t border-neutral-100 dark:border-neutral-900 flex flex-col md:flex-row items-center justify-between gap-8 pb-8">
-          <div className="flex items-center gap-2">
-             <span className="text-2xl font-black uppercase tracking-tighter text-neutral-900 dark:text-white">DocBit</span>
-             <span className="text-[10px] font-bold text-neutral-400">v0.1.0</span>
-          </div>
-          
-          <div className="flex items-center gap-8">
-             <Link to="/privacy" className="text-xs font-black uppercase tracking-widest text-neutral-500 hover:text-blue-600 transition-colors">Privacy Policy</Link>
-             <Link to="/terms" className="text-xs font-black uppercase tracking-widest text-neutral-500 hover:text-blue-600 transition-colors">Terms of Service</Link>
-          </div>
+        {/* COMPARISON & SHORTCUTS */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <section className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[40px] p-10 space-y-8">
+            <div className="space-y-2">
+              <h3 className="text-2xl font-black tracking-tight text-neutral-900 dark:text-white uppercase italic">Why DocBit vs Others?</h3>
+              <p className="text-sm text-neutral-500 font-medium tracking-tight">Serious transparency for serious documents.</p>
+            </div>
 
-          <div className="text-xs text-neutral-400 font-medium">
-             © {new Date().getFullYear()} DocBit. Built for the Private Web.
-          </div>
-        </footer>
+            <div className="space-y-4">
+              {[
+                { feature: "Privacy", others: "Upload to Cloud", docbit: "Local Only" },
+                { feature: "Speed", others: "Upload/Wait/Download", docbit: "Instant WASM" },
+                { feature: "Limits", others: "Paid Tiers", docbit: "No Limits" },
+                { feature: "Security", others: "Remote Logs", docbit: "Zero Trace" }
+              ].map((row, i) => (
+                <div key={i} className="flex items-center justify-between py-3 border-b border-neutral-100 dark:border-neutral-800 last:border-0">
+                  <span className="text-[10px] font-black uppercase text-neutral-400 tracking-wider w-24">{row.feature}</span>
+                  <span className="text-[10px] font-bold text-red-500 w-24 text-center opacity-50">{row.others}</span>
+                  <span className="text-[11px] font-black text-blue-600 dark:text-blue-400 w-24 text-right uppercase tracking-tighter">{row.docbit}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="bg-blue-600 rounded-[40px] p-10 text-white space-y-8 shadow-2xl shadow-blue-500/20">
+            <div className="space-y-2">
+              <h3 className="text-2xl font-black tracking-tight uppercase italic">Power User Flow</h3>
+              <p className="text-sm text-blue-100 font-bold opacity-80 uppercase tracking-[0.1em]">Keyboard Shortcuts (Beta)</p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3">
+              {[
+                { keys: "⌘ + U", action: "Quick Upload" },
+                { keys: "Enter", action: "Confirm / Merge" },
+                { keys: "Esc", action: "Close / Reset" },
+                { keys: "Shift + R", action: "Reorder Files" }
+              ].map((shortcut, i) => (
+                <div key={i} className="flex items-center justify-between p-4 bg-white/10 rounded-2xl border border-white/10">
+                  <span className="text-[10px] font-black uppercase tracking-widest">{shortcut.action}</span>
+                  <span className="px-3 py-1 bg-white text-blue-600 rounded-lg text-[10px] font-black tracking-tight uppercase">{shortcut.keys}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
       </div>
     </div>
   );

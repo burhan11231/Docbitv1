@@ -100,10 +100,6 @@ export default function PrivacyPolicy() {
             </section>
           </div>
         </motion.section>
-
-        <div className="text-center pb-12">
-          <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.3em]">&copy; 2024 DocBit PRIVACY MODULE. All rights reserved.</p>
-        </div>
       </div>
     </div>
   );

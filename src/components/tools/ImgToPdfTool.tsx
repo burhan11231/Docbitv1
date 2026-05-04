@@ -18,6 +18,9 @@ import {
   Layout,
   Palette,
   Shield,
+  ShieldCheck,
+  Zap,
+  Globe,
   Image as ImageIcon
 } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -25,6 +28,8 @@ import { readFileAsArrayBuffer, cn, formatBytes } from '../../lib/utils';
 import { DownloadResult } from '../DownloadResult';
 import { ImageViewer } from '../ImageViewer';
 import { ColorPickerModal } from '../ColorPickerModal';
+import { SEO } from '../SEO';
+import { ToolInfo } from '../ToolInfo';
 
 type FitMode = 'fit' | 'fill' | 'stretch';
 type PageSize = 'A4' | 'A3' | 'Letter' | 'Custom';
@@ -252,6 +257,12 @@ export default function ImgToPdfTool() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 pb-40">
+      <SEO 
+        title="Convert Images to PDF Online - Free & Secure" 
+        description="Turn JPG, PNG, and WebP images into high-quality PDF documents in seconds. Fully private, local processing ensures your images never leave your computer."
+        keywords="image to pdf, convert jpg to pdf, png to pdf, free online pdf converter, docbit"
+      />
+
        {result ? (
         <DownloadResult 
           filename="images_to_pdf.pdf" 
@@ -260,22 +271,42 @@ export default function ImgToPdfTool() {
           onReset={() => { setImages([]); setResult(null); }} 
         />
        ) : images.length === 0 ? (
-        <Dropzone 
-          onFilesSelected={handleFiles} 
-          maxFiles={50} 
-          isProcessing={isAddingFiles}
-          accept={{ 'image/png': ['.png'], 'image/jpeg': ['.jpg', '.jpeg'], 'image/webp': ['.webp'] }}
-          label="Select Images (JPG, PNG, WebP)" 
-        />
+        <>
+          <Dropzone 
+            onFilesSelected={handleFiles} 
+            maxFiles={50} 
+            isProcessing={isAddingFiles}
+            accept={{ 'image/png': ['.png'], 'image/jpeg': ['.jpg', '.jpeg'], 'image/webp': ['.webp'] }}
+            label="Select Images (JPG, PNG, WebP)" 
+          />
+
+          <ToolInfo 
+            title="Image to PDF Converter"
+            steps={[
+              { title: "Select Images", desc: "Choose multiple JPG, PNG, or WebP files from your device or drag them here." },
+              { title: "Customize Layout", desc: "Adjust page size (A4, A3, Letter), margins, orientation, and image fit algorithms." },
+              { title: "Generate PDF", desc: "Click Generate to create a single perfectly formatted PDF from your images locally." }
+            ]}
+            benefits={[
+              { title: "Local Conversion", desc: "We convert images to PDF directly in your browser. No data is sent to servers.", icon: <ShieldCheck className="w-8 h-8" /> },
+              { title: "Pro Customization", desc: "Full control over borders, background colors, and image scaling.", icon: <Settings2 className="w-8 h-8" /> },
+              { title: "All Formats", desc: "Support for JPG, JPEG, PNG, and modern WebP image formats.", icon: <ImageIcon className="w-8 h-8" /> }
+            ]}
+            faqs={[
+              { q: "Will my images lose quality?", a: "No. We use high-fidelity compression algorithms that maintain crispness while optimized for PDF." },
+              { q: "Can I reorder images?", a: "Yes. Once uploaded, you can use the move buttons to arrange images in your preferred sequence." },
+              { q: "Is there a limit on number of images?", a: "You can convert up to 50 images at once for optimal browser performance." }
+            ]}
+          />
+        </>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
            <div className="lg:col-span-8 space-y-6">
               <div className="flex items-center justify-between px-2">
                 <div className="space-y-1">
-                  <h2 className="text-2xl font-black flex items-center gap-3">
-                    <FileImage className="w-7 h-7 text-blue-600" />
+                  <h1 className="text-2xl font-black flex items-center gap-3">
                     Convert Images to PDF
-                  </h2>
+                  </h1>
                   <p className="text-xs font-bold uppercase tracking-widest text-neutral-400">Turn multiple images into a single high-quality PDF in seconds.</p>
                 </div>
                 <label className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl transition-all shadow-lg shadow-blue-500/20 cursor-pointer active:scale-95 text-sm">

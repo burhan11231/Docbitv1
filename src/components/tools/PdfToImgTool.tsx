@@ -23,6 +23,9 @@ import { readFileAsArrayBuffer, cn, formatBytes } from '../../lib/utils';
 import JSZip from 'jszip';
 import { ImageViewer } from '../ImageViewer';
 import { DownloadResult } from '../DownloadResult';
+import { SEO } from '../SEO';
+import { ToolInfo } from '../ToolInfo';
+import { ShieldCheck, Zap, Globe } from 'lucide-react';
 
 // Configure pdfjs worker
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -187,6 +190,12 @@ export default function PdfToImgTool() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 pb-40">
+      <SEO 
+        title="Convert PDF to Image Online - Free & High Quality" 
+        description="Extract pages from your PDF as high-quality JPG or PNG images. Fast, secure, and 100% private processing in your browser."
+        keywords="pdf to image, convert pdf to jpg, extract images from pdf, pdf to png, docbit"
+      />
+
        {result ? (
         <DownloadResult 
           filename={result.isZip ? `extracted_from_${file?.name}.zip` : `extracted_page.${format}`}
@@ -195,16 +204,36 @@ export default function PdfToImgTool() {
           onReset={() => { setFile(null); setPages([]); setResult(null); }}
         />
        ) : !file ? (
-        <Dropzone onFilesSelected={handleFiles} isProcessing={isLoadingFile} label="Extract PDF Pages to Images" />
+        <>
+          <Dropzone onFilesSelected={handleFiles} isProcessing={isLoadingFile} label="Extract PDF Pages to Images" />
+          
+          <ToolInfo 
+            title="PDF to Image Converter"
+            steps={[
+              { title: "Upload PDF", desc: "Select the PDF file you want to convert into images." },
+              { title: "Configure Output", desc: "Choose your preferred image format (JPG or PNG) and specify which pages to extract." },
+              { title: "Download Images", desc: "Retrieve your high-resolution images instantly in a neatly organized ZIP file." }
+            ]}
+            benefits={[
+              { title: "Browser-Only", desc: "Your PDF never touches a server. All image rendering happens locally inside your browser.", icon: <ShieldCheck className="w-8 h-8" /> },
+              { title: "High Resolution", desc: "We render PDF pages at 2x scale for sharp, professional-grade image quality.", icon: <Zap className="w-8 h-8" /> },
+              { title: "Select & Save", desc: "Choose only the specific pages you need instead of converting the entire document.", icon: <Globe className="w-8 h-8" /> }
+            ]}
+            faqs={[
+              { q: "What image formats are supported?", a: "Currently, we support high-quality JPG (best for photos) and PNG (best for graphics/text)." },
+              { q: "Is there a limit on file size?", a: "Up to 300MB, depending on your device's RAM, as all processing is local." },
+              { q: "Will the images have watermarks?", a: "No. Your output is clean, high-resolution, and 100% watermark-free - always." }
+            ]}
+          />
+        </>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
            <div className="lg:col-span-8 space-y-6">
               <div className="flex items-center justify-between px-2">
                  <div className="space-y-1">
-                    <h2 className="text-2xl font-black flex items-center gap-3">
-                      <Files className="w-7 h-7 text-blue-600" />
+                    <h1 className="text-2xl font-black flex items-center gap-3">
                       Convert PDF to Images
-                    </h2>
+                    </h1>
                     <p className="text-xs font-bold uppercase tracking-widest text-neutral-400">Extract pages from your PDF as high-quality images.</p>
                  </div>
               </div>

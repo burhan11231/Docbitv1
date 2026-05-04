@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Dropzone } from '../Dropzone';
 import { PDFDocument } from 'pdf-lib';
 import * as pdfjs from 'pdfjs-dist';
@@ -6,25 +6,27 @@ import {
   Scissors, 
   Download, 
   Loader2,
-  Settings,
-  Split,
-  FileBox,
-  Shield,
+  Settings2,
   Layers,
   FileText,
-  Search,
-  X
+  X,
+  Shield,
+  FileBox,
+  LayoutGrid
 } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { readFileAsArrayBuffer, cn, formatBytes } from '../../lib/utils';
 import JSZip from 'jszip';
 import { DownloadResult } from '../DownloadResult';
 import { ImageViewer } from '../ImageViewer';
+import { SEO } from '../SEO';
+import { ToolInfo } from '../ToolInfo';
+import { ShieldCheck, Zap, Globe } from 'lucide-react';
 
 // Configure pdfjs worker
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
-type SplitMode = 'range' | 'every-page' | 'every-x-pages' | 'specific-pages';
+type SplitMode = 'all' | 'range';
 
 export default function SplitTool() {
   const [file, setFile] = useState<File | null>(null);
@@ -35,9 +37,8 @@ export default function SplitTool() {
   const [previews, setPreviews] = useState<string[]>([]);
   
   const [isSplitting, setIsSplitting] = useState(false);
-  const [splitMode, setSplitMode] = useState<SplitMode>('every-page');
+  const [splitMode, setSplitMode] = useState<SplitMode>('all');
   const [rangeStr, setRangeStr] = useState('');
-  const [everyX, setEveryX] = useState(1);
   
   const [result, setResult] = useState<{ url: string; size: number; isZip: boolean } | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -59,7 +60,6 @@ export default function SplitTool() {
       setPdfDoc(doc);
       setTotalPages(doc.getPageCount());
 
-      // Generate first few previews - use a copy to avoid detaching
       const loadingTask = pdfjs.getDocument({ data: buffer.slice(0) });
       const pdf = await loadingTask.promise;
       setPdfProxy(pdf);
@@ -67,9 +67,6 @@ export default function SplitTool() {
       const numToPreview = Math.min(12, doc.getPageCount());
       
       for (let i = 1; i <= numToPreview; i++) {
-        // Small stagger for visual feedback
-        if (i % 2 === 0) await new Promise(resolve => setTimeout(resolve, 50));
-        
         const page = await pdf.getPage(i);
         const viewport = page.getViewport({ scale: 0.3 });
         const canvas = document.createElement('canvas');
@@ -84,7 +81,6 @@ export default function SplitTool() {
       }
     } catch (e) {
       console.error(e);
-      alert('Failed to load PDF.');
       setFile(null);
     } finally {
       setIsLoadingFile(false);
@@ -109,7 +105,7 @@ export default function SplitTool() {
         setHighResPreview(canvas.toDataURL('image/jpeg', 0.9));
       }
     } catch (e) {
-      console.error('High-res split preview failed:', e);
+      console.error('Split preview failed:', e);
     } finally {
       setIsRenderingPreview(false);
     }
@@ -124,18 +120,17 @@ export default function SplitTool() {
 
       const saveBlob = async (doc: PDFDocument, name: string) => {
         const bytes = await doc.save();
-        const blob = new Blob([bytes], { type: 'application/pdf' });
-        zip.file(name, blob);
+        zip.file(name, bytes);
       };
 
-      if (splitMode === 'every-page') {
+      if (splitMode === 'all') {
         for (let i = 0; i < totalPages; i++) {
           const newDoc = await PDFDocument.create();
           const [page] = await newDoc.copyPages(pdfDoc, [i]);
           newDoc.addPage(page);
-          await saveBlob(newDoc, `${file.name.replace('.pdf', '')}_page_${i + 1}.pdf`);
+          await saveBlob(newDoc, `${file.name.replace('.pdf', '')}_p${i + 1}.pdf`);
         }
-      } else if (splitMode === 'range' || splitMode === 'specific-pages') {
+      } else if (splitMode === 'range') {
         const ranges = rangeStr.split(',').map(r => r.trim());
         const newDoc = await PDFDocument.create();
         
@@ -153,15 +148,7 @@ export default function SplitTool() {
             }
           }
         }
-        await saveBlob(newDoc, `split_${file.name}`);
-      } else if (splitMode === 'every-x-pages') {
-        for (let i = 0; i < totalPages; i += everyX) {
-          const newDoc = await PDFDocument.create();
-          const indices = Array.from({ length: Math.min(everyX, totalPages - i) }, (_, k) => i + k);
-          const copied = await newDoc.copyPages(pdfDoc, indices);
-          copied.forEach(p => newDoc.addPage(p));
-          await saveBlob(newDoc, `${file.name.replace('.pdf', '')}_part_${Math.floor(i / everyX) + 1}.pdf`);
-        }
+        await saveBlob(newDoc, `extracted_${file.name}`);
       }
 
       const content = await zip.generateAsync({ type: 'blob' });
@@ -169,14 +156,19 @@ export default function SplitTool() {
       setResult({ url, size: content.size, isZip: true });
     } catch (error) {
       console.error('Split error:', error);
-      alert('Error splitting PDF. Check parameters.');
     } finally {
       setIsSplitting(false);
     }
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 pb-40">
+    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 pb-40 px-4">
+      <SEO 
+        title="Split PDF Online - Extract Pages for Free" 
+        description="Divide your PDF into separate files or extract specific pages easily. Faster and safer processing directly in your browser."
+        keywords="split pdf, extract pdf pages, free pdf splitter, divide pdf online, docbit"
+      />
+
        {result ? (
         <DownloadResult 
           filename={result.isZip ? `split_${file?.name.replace('.pdf', '')}.zip` : `extracted_${file?.name}`}
@@ -185,143 +177,144 @@ export default function SplitTool() {
           onReset={() => { setFile(null); setPdfDoc(null); setResult(null); setPreviews([]); }}
         />
        ) : !file ? (
-        <Dropzone onFilesSelected={handleFiles} isProcessing={isLoadingFile} label="Split PDF Document" />
-      ) : (
+        <>
+          <Dropzone onFilesSelected={handleFiles} isProcessing={isLoadingFile} label="Split PDF Document" />
+          
+          <ToolInfo 
+            title="PDF Splitter"
+            steps={[
+              { title: "Upload PDF", desc: "Select the PDF file you want to split or extract pages from." },
+              { title: "Select Mode", desc: "Choose to extract all pages into separate files or define a custom range." },
+              { title: "Split & Zip", desc: "Download your split pages instantly. If splitting into multiple files, we'll pack them in a ZIP." }
+            ]}
+            benefits={[
+              { title: "In-Browser Split", desc: "No uploads. Your document is split locally, ensuring total privacy.", icon: <ShieldCheck className="w-8 h-8" /> },
+              { title: "Range Support", desc: "Extract specific pages like '1, 3, 5-10' with our intelligent parser.", icon: <Zap className="w-8 h-8" /> },
+              { title: "No Subscription", desc: "Get full access to all splitting features without any account or fees.", icon: <Globe className="w-8 h-8" /> }
+            ]}
+            faqs={[
+              { q: "Can I split a single page into two?", a: "No, splitting refers to separating high-level pages. We don't cut individual page content." },
+              { q: "How many pages can I extract?", a: "There's no hard limit, but very large PDFs (1000+ pages) may slow down your browser." },
+              { q: "Is the ZIP file safe?", a: "Yes. The ZIP is generated on your computer using JSZip. It contains only your processed PDFs." }
+            ]}
+          />
+        </>
+       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-           <div className="lg:col-span-8 space-y-6">
+           <div className="lg:col-span-8 space-y-8">
               <div className="flex items-center justify-between px-2">
                  <div className="space-y-1">
-                    <h2 className="text-2xl font-black flex items-center gap-3">
-                      <Scissors className="w-7 h-7 text-blue-600" />
+                    <h1 className="text-2xl font-black flex items-center gap-3">
                       Split PDF Pages
-                    </h2>
+                    </h1>
                     <p className="text-xs font-bold uppercase tracking-widest text-neutral-400">Divide a PDF into separate files or extract specific pages easily.</p>
                  </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-3">
-                  {[
-                    { id: 'every-page', label: 'Single-Page PDFs', icon: <Layers className="w-5 h-5" />, desc: 'Convert every page into its own file' },
-                    { id: 'range', label: 'Custom Page Range', icon: <Settings className="w-5 h-5" />, desc: 'Define range like "1-5" or chunks' },
-                    { id: 'every-x-pages', label: 'Fixed Chunks', icon: <FileBox className="w-5 h-5" />, desc: 'Split into files containing X pages' },
-                    { id: 'specific-pages', label: 'Extract Selection', icon: <Search className="w-5 h-5" />, desc: 'Extract specific pages like "2, 5, 10"' }
-                  ].map((m) => (
-                    <button
-                      key={m.id}
-                      onClick={() => setSplitMode(m.id as SplitMode)}
-                      className={cn(
-                        "flex items-center gap-6 p-6 rounded-[28px] border-2 transition-all text-left group",
-                        splitMode === m.id 
-                          ? "bg-blue-600 border-blue-600 text-white shadow-xl shadow-blue-500/20" 
-                          : "bg-white dark:bg-neutral-900 border-neutral-100 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-700"
-                      )}
+              <div className="bg-white dark:bg-neutral-900 rounded-[40px] border border-neutral-200 dark:border-neutral-800 p-8 shadow-sm">
+                <div className="flex items-center gap-3 mb-8">
+                  <LayoutGrid className="w-5 h-5 text-blue-600" />
+                  <h3 className="text-xs font-black uppercase tracking-widest text-neutral-400">Page Structure</h3>
+                </div>
+                
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                  {previews.map((p, i) => (
+                    <motion.div 
+                      key={i} 
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => handlePreview(i)} 
+                      className="group relative aspect-[3/4] bg-neutral-50 dark:bg-neutral-800 rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-700 cursor-zoom-in shadow-sm hover:shadow-md transition-all"
                     >
-                      <div className={cn(
-                        "w-12 h-12 rounded-2xl flex items-center justify-center transition-colors",
-                        splitMode === m.id ? "bg-white/20 text-white" : "bg-neutral-50 dark:bg-neutral-800 text-neutral-400"
-                      )}>
-                        {m.icon}
+                      <img src={p} className="w-full h-full object-cover" alt={`Page ${i+1}`} />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
+                      <div className="absolute bottom-2 right-2 px-2 py-1 bg-white/90 dark:bg-black/90 backdrop-blur shadow-sm rounded-lg text-[10px] font-black text-neutral-600 dark:text-neutral-400">
+                        P{i+1}
                       </div>
-                      <div className="flex-1">
-                        <p className="font-black text-sm uppercase tracking-tight">{m.label}</p>
-                        <p className={cn(
-                          "text-[10px] font-bold uppercase tracking-widest opacity-60",
-                          splitMode === m.id ? "text-white" : "text-neutral-400"
-                        )}>{m.desc}</p>
-                      </div>
-                    </button>
+                    </motion.div>
                   ))}
-              </div>
-
-              <div className="space-y-4">
-                 <div className="flex items-center gap-2 px-2">
-                    <FileText className="w-4 h-4 text-blue-600" />
-                    <h3 className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Page Preview</h3>
-                 </div>
-                 <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-                   {previews.map((p, i) => (
-                     <div key={i} onClick={() => handlePreview(i)} className="aspect-[1/1.414] bg-neutral-100 dark:bg-neutral-800 rounded-lg overflow-hidden border border-neutral-200 dark:border-neutral-700 cursor-zoom-in hover:shadow-lg transition-all">
-                       <img src={p} className="w-full h-full object-cover" alt={`Preview ${i+1}`} />
-                     </div>
-                   ))}
-                 </div>
+                  {totalPages > 12 && (
+                    <div className="aspect-[3/4] flex flex-col items-center justify-center bg-neutral-50 dark:bg-neutral-800 rounded-2xl border border-dashed border-neutral-200 dark:border-neutral-700 p-4 text-center">
+                      <FileBox className="w-6 h-6 text-neutral-300 mb-2" />
+                      <p className="text-[10px] font-black uppercase text-neutral-400 leading-tight">
+                        +{totalPages - 12} More Pages
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
            </div>
 
            <ImageViewer src={highResPreview || previewImage || ''} isOpen={!!previewImage} onClose={() => { setPreviewImage(null); setHighResPreview(null); }} />
 
            <div className="lg:col-span-4 space-y-6">
-              <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[32px] p-8 shadow-xl shadow-black/5 space-y-8">
+              <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[32px] p-8 shadow-xl shadow-black/5 space-y-8 sticky top-8">
                  <div className="space-y-6">
-                     <motion.div 
-                      layout
-                      className={cn(
-                        "group relative bg-white dark:bg-neutral-900 rounded-2xl p-3 border border-neutral-200 dark:border-neutral-800 flex items-center gap-4 transition-all hover:border-blue-500 mb-6",
-                        isLoadingFile && "opacity-70 border-blue-200 bg-blue-50/10"
-                      )}
-                    >
-                      <div className="w-16 aspect-[1/1.414] bg-neutral-50 dark:bg-neutral-800 rounded-lg overflow-hidden border border-neutral-100 dark:border-neutral-800 flex-shrink-0 flex items-center justify-center relative">
-                        {isLoadingFile ? (
-                          <div className="absolute inset-0 flex items-center justify-center bg-blue-500/5">
-                            <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
-                          </div>
-                        ) : (
-                          <FileText className="w-8 h-8 text-blue-600/30" />
-                        )}
-                      </div>
+                    <div className="flex items-center gap-2 text-blue-600">
+                      <Settings2 className="w-4 h-4" />
+                      <h3 className="text-[10px] font-black tracking-widest uppercase">Split Strategy</h3>
+                    </div>
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-[10px] font-black uppercase text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded">
-                            {isLoadingFile ? 'Processing' : 'Active'}
-                          </span>
-                          {isLoadingFile && (
-                            <span className="text-[8px] font-black uppercase tracking-widest text-blue-500 animate-pulse">Analyzing...</span>
-                          )}
-                        </div>
-                        <p className="text-xs font-black uppercase text-neutral-900 dark:text-white truncate">{file.name}</p>
-                        <p className="text-[10px] font-bold text-neutral-400 uppercase">{formatBytes(file.size)}</p>
-                      </div>
+                    <div className="grid grid-cols-1 gap-2">
+                       {[
+                         { id: 'all', label: 'Extract All', icon: <Layers className="w-4 h-4" /> },
+                         { id: 'range', label: 'Custom Range', icon: <Scissors className="w-4 h-4" /> }
+                       ].map((mode) => (
+                         <button
+                           key={mode.id}
+                           onClick={() => setSplitMode(mode.id as SplitMode)}
+                           className={cn(
+                             "flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all text-left",
+                             splitMode === mode.id 
+                               ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20" 
+                               : "bg-white dark:bg-neutral-900 border-neutral-100 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-700"
+                           )}
+                         >
+                           <div className="w-8 h-8 rounded-lg bg-current/10 flex items-center justify-center">
+                             {React.cloneElement(mode.icon as React.ReactElement, { className: "w-4 h-4" })}
+                           </div>
+                           <span className="text-xs font-black uppercase tracking-tight">{mode.label}</span>
+                         </button>
+                       ))}
+                    </div>
 
-                      <div className="flex items-center pr-2">
-                        <button 
-                          disabled={isLoadingFile}
-                          onClick={() => { setFile(null); setPdfDoc(null); setResult(null); setPreviews([]); }}
-                          className="w-8 h-8 flex items-center justify-center bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:text-red-600 transition-all rounded-lg border border-neutral-200/50 dark:border-neutral-700/50 disabled:opacity-50"
-                          title="Remove"
+                    <AnimatePresence mode="wait">
+                      {splitMode === 'range' && (
+                        <motion.div 
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          className="space-y-2"
                         >
-                          <X className="w-4 h-4" />
-                        </button>
+                          <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Page Range</label>
+                          <input 
+                            type="text" 
+                            placeholder="e.g. 1-5, 8, 12-15"
+                            value={rangeStr} 
+                            onChange={(e) => setRangeStr(e.target.value)} 
+                            className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 rounded-xl border-none font-black text-lg focus:ring-2 focus:ring-blue-500 transition-all shadow-inner"
+                          />
+                          <p className="text-[10px] font-bold text-neutral-500 uppercase">Separate ranges with commas</p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800">
+                      <div className="flex items-center justify-between mb-4">
+                        <p className="text-[10px] font-black uppercase text-neutral-400">Active File</p>
+                        <span className="text-[10px] font-black uppercase text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-full">
+                          {totalPages} Pages
+                        </span>
                       </div>
-                    </motion.div>
-
-                    <div className="space-y-4">
-                       {(splitMode === 'range' || splitMode === 'specific-pages') && (
-                         <div className="space-y-2">
-                           <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Range Input</p>
-                           <input 
-                             type="text" 
-                             placeholder={splitMode === 'range' ? "e.g. 1-5, 8-10" : "e.g. 2, 5, 9"}
-                             value={rangeStr} 
-                             onChange={(e) => setRangeStr(e.target.value)} 
-                             className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 rounded-xl border-none font-black text-lg focus:ring-2 focus:ring-blue-500"
-                           />
+                      <div className="flex items-center gap-3">
+                         <div className="w-10 h-10 rounded-lg bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 flex items-center justify-center text-blue-600">
+                            <FileText className="w-5 h-5" />
                          </div>
-                       )}
-                       {splitMode === 'every-x-pages' && (
-                         <div className="space-y-2">
-                           <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Pages per File</p>
-                           <input 
-                             type="number" 
-                             min="1"
-                             value={everyX} 
-                             onChange={(e) => setEveryX(parseInt(e.target.value) || 1)} 
-                             className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 rounded-xl border-none font-black text-2xl focus:ring-2 focus:ring-blue-500"
-                           />
+                         <div className="flex-1 min-w-0">
+                           <p className="text-[10px] font-black text-neutral-900 dark:text-white truncate">{file.name}</p>
+                           <p className="text-[8px] font-bold text-neutral-400 uppercase tracking-widest">{formatBytes(file.size)}</p>
                          </div>
-                       )}
-
-
+                      </div>
                     </div>
                  </div>
 
@@ -329,20 +322,20 @@ export default function SplitTool() {
                     <button 
                       onClick={processSplit}
                       disabled={isSplitting}
-                      className="w-full py-5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl shadow-xl shadow-blue-500/20 active:scale-95 transition-all flex items-center justify-center gap-3"
+                      className="w-full py-5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl shadow-xl shadow-blue-500/20 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
                     >
                       {isSplitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Scissors className="w-5 h-5" />}
-                      {isSplitting ? 'SPLITTING...' : 'SPLIT'}
+                      {isSplitting ? 'PROCESSING...' : 'SPLIT PDF'}
                     </button>
                     <div className="mt-4 flex items-center justify-center gap-2 text-[8px] font-black uppercase text-neutral-400 tracking-[0.2em]">
                        <Shield className="w-3 h-3" />
-                       Instant Sandbox Logic
+                       Private Local Logic
                     </div>
                  </div>
               </div>
            </div>
         </div>
-      )}
+       )}
     </div>
   );
 }

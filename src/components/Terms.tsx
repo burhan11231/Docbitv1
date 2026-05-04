@@ -107,10 +107,6 @@ export default function Terms() {
             </section>
           </div>
         </motion.section>
-
-        <div className="text-center pb-12">
-          <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.3em]">&copy; 2024 DocBit TERMS MODULE. All rights reserved.</p>
-        </div>
       </div>
     </div>
   );

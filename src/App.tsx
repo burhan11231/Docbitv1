@@ -3,6 +3,7 @@ import { Routes, Route, useLocation } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { Home } from './components/Home';
 import { TOOLS } from './constants/tools';
+import ScrollToTop from './components/ScrollToTop';
 
 // Lazy load tools
 const MergeTool = lazy(() => import('./components/tools/MergeTool'));
@@ -11,6 +12,10 @@ const PdfToImgTool = lazy(() => import('./components/tools/PdfToImgTool'));
 const ImgToPdfTool = lazy(() => import('./components/tools/ImgToPdfTool'));
 const PrivacyPolicy = lazy(() => import('./components/PrivacyPolicy'));
 const Terms = lazy(() => import('./components/Terms'));
+const About = lazy(() => import('./components/About'));
+const Contact = lazy(() => import('./components/Contact'));
+const Help = lazy(() => import('./components/Help'));
+const NotFound = lazy(() => import('./components/NotFound'));
 
 export default function App() {
   const location = useLocation();
@@ -32,6 +37,7 @@ export default function App() {
 
   return (
     <Layout activeToolName={activeTool?.name}>
+      <ScrollToTop />
       <Suspense fallback={
         <div className="flex items-center justify-center h-full">
           <div className="flex flex-col items-center gap-4">
@@ -48,6 +54,10 @@ export default function App() {
           <Route path="/tool/img-to-pdf" element={<ImgToPdfTool />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<Terms />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/help" element={<Help />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
     </Layout>

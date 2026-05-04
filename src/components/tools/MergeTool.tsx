@@ -14,11 +14,15 @@ import {
   Shield, 
   Maximize, 
   Zap,
-  Square
+  Square,
+  ShieldCheck,
+  Globe
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { readFileAsArrayBuffer, cn, formatBytes } from '../../lib/utils';
 import { DownloadResult } from '../DownloadResult';
+import { SEO } from '../SEO';
+import { ToolInfo } from '../ToolInfo';
 
 interface FileData {
   id: string;
@@ -118,6 +122,12 @@ export default function MergeTool() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 pb-40">
+      <SEO 
+        title="Merge PDF Files Online - Free & Secure" 
+        description="Merge multiple PDF files into a single document in seconds. 100% private, local processing - your files never leave your device."
+        keywords="merge pdf online, combine pdf files, free pdf tools, join pdf documents"
+      />
+
       {result ? (
         <DownloadResult 
           filename="merged_docbit.pdf" 
@@ -126,16 +136,36 @@ export default function MergeTool() {
           onReset={() => { setFiles([]); setResult(null); }} 
         />
       ) : files.length === 0 ? (
-        <Dropzone onFilesSelected={handleFiles} maxFiles={20} isProcessing={isAddingFiles} label="Merge PDFs - Local Processing" />
+        <>
+          <Dropzone onFilesSelected={handleFiles} maxFiles={20} isProcessing={isAddingFiles} label="Merge PDFs - Local Processing" />
+          
+          <ToolInfo 
+            title="PDF Merger"
+            steps={[
+              { title: "Upload Files", desc: "Select or drag and drop multiple PDF files you want to combine." },
+              { title: "Arrange Order", desc: "Drag and drop to reorder files or use the up/down arrows to get the precise sequence." },
+              { title: "Merge & Download", desc: "Click Merge to combine them into a single high-quality PDF document instantly." }
+            ]}
+            benefits={[
+              { title: "100% Private", desc: "Your files are processed locally in your browser. Nothing is uploaded to any server.", icon: <ShieldCheck className="w-8 h-8" /> },
+              { title: "Blazing Fast", desc: "Since there is no upload or download delay, merging is almost instantaneous.", icon: <Zap className="w-8 h-8" /> },
+              { title: "High Fidelity", desc: "We maintain the original quality of your documents, including fonts and images.", icon: <Globe className="w-8 h-8" /> }
+            ]}
+            faqs={[
+              { q: "Is there a limit on file size?", a: "The limit is based on your browser's memory. Generally, we support up to 500MB of combined PDF data." },
+              { q: "Are my files stored anywhere?", a: "No. DocBit uses client-side WASM technology. Your files stay in your browser's memory and are deleted once you close the tab." },
+              { q: "Can I merge protected PDFs?", a: "Currently, you must provide unlocked PDFs. We prioritize security and do not bypass owner passwords." }
+            ]}
+          />
+        </>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
            <div className="lg:col-span-8 space-y-6">
               <div className="flex items-center justify-between px-2">
                  <div className="space-y-1">
-                    <h2 className="text-2xl font-black flex items-center gap-3">
-                      <Combine className="w-7 h-7 text-blue-600" />
+                    <h1 className="text-2xl font-black flex items-center gap-3">
                       Merge PDF Files
-                    </h2>
+                    </h1>
                     <p className="text-xs font-bold uppercase tracking-widest text-neutral-400">Combine multiple PDFs into a single document in seconds.</p>
                  </div>
                  <label className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl cursor-pointer shadow-lg shadow-blue-500/20 active:scale-95 text-xs uppercase tracking-widest transition-all">
