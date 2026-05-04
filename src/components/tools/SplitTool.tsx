@@ -28,7 +28,9 @@ type SplitMode = 'range' | 'every-page' | 'every-x-pages' | 'specific-pages';
 
 export default function SplitTool() {
   const [file, setFile] = useState<File | null>(null);
+  const [isLoadingFile, setIsLoadingFile] = useState(false);
   const [pdfDoc, setPdfDoc] = useState<any>(null);
+  const [pdfProxy, setPdfProxy] = useState<pdfjs.PDFDocumentProxy | null>(null);
   const [totalPages, setTotalPages] = useState(0);
   const [previews, setPreviews] = useState<string[]>([]);
   
@@ -36,17 +38,20 @@ export default function SplitTool() {
   const [splitMode, setSplitMode] = useState<SplitMode>('every-page');
   const [rangeStr, setRangeStr] = useState('');
   const [everyX, setEveryX] = useState(1);
-  const [outputFormat, setOutputFormat] = useState<'individual' | 'zip'>('zip');
   
   const [result, setResult] = useState<{ url: string; size: number; isZip: boolean } | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [highResPreview, setHighResPreview] = useState<string | null>(null);
+  const [isRenderingPreview, setIsRenderingPreview] = useState(false);
 
   const handleFiles = async (files: File[]) => {
     if (files.length === 0) return;
     const f = files[0];
-    setIsSplitting(true);
+    setIsLoadingFile(true);
     setFile(f);
     setResult(null);
+    setPreviews([]);
+    setPdfProxy(null);
 
     try {
       const buffer = await readFileAsArrayBuffer(f);
@@ -57,10 +62,14 @@ export default function SplitTool() {
       // Generate first few previews - use a copy to avoid detaching
       const loadingTask = pdfjs.getDocument({ data: buffer.slice(0) });
       const pdf = await loadingTask.promise;
+      setPdfProxy(pdf);
       const prevs: string[] = [];
-      const numToPreview = Math.min(6, doc.getPageCount());
+      const numToPreview = Math.min(12, doc.getPageCount());
       
       for (let i = 1; i <= numToPreview; i++) {
+        // Small stagger for visual feedback
+        if (i % 2 === 0) await new Promise(resolve => setTimeout(resolve, 50));
+        
         const page = await pdf.getPage(i);
         const viewport = page.getViewport({ scale: 0.3 });
         const canvas = document.createElement('canvas');
@@ -70,15 +79,39 @@ export default function SplitTool() {
           canvas.width = viewport.width;
           await page.render({ canvasContext: context, canvas, viewport }).promise;
           prevs.push(canvas.toDataURL('image/jpeg', 0.8));
-          if (i % 2 === 0) setPreviews([...prevs]);
+          setPreviews([...prevs]);
         }
       }
-      setPreviews(prevs);
     } catch (e) {
       console.error(e);
       alert('Failed to load PDF.');
+      setFile(null);
     } finally {
-      setIsSplitting(false);
+      setIsLoadingFile(false);
+    }
+  };
+
+  const handlePreview = async (index: number) => {
+    if (!pdfProxy) return;
+    setPreviewImage(previews[index] || '');
+    setHighResPreview(null);
+    setIsRenderingPreview(true);
+
+    try {
+      const page = await pdfProxy.getPage(index + 1);
+      const viewport = page.getViewport({ scale: 2.0 });
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      if (context) {
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        await page.render({ canvasContext: context, canvas, viewport }).promise;
+        setHighResPreview(canvas.toDataURL('image/jpeg', 0.9));
+      }
+    } catch (e) {
+      console.error('High-res split preview failed:', e);
+    } finally {
+      setIsRenderingPreview(false);
     }
   };
 
@@ -88,13 +121,11 @@ export default function SplitTool() {
 
     try {
       const zip = new JSZip();
-      let blobs: { blob: Blob; name: string }[] = [];
 
       const saveBlob = async (doc: PDFDocument, name: string) => {
         const bytes = await doc.save();
         const blob = new Blob([bytes], { type: 'application/pdf' });
-        if (outputFormat === 'zip') zip.file(name, blob);
-        else blobs.push({ blob, name });
+        zip.file(name, blob);
       };
 
       if (splitMode === 'every-page') {
@@ -133,17 +164,9 @@ export default function SplitTool() {
         }
       }
 
-      if (outputFormat === 'zip') {
-        const content = await zip.generateAsync({ type: 'blob' });
-        const url = URL.createObjectURL(content);
-        setResult({ url, size: content.size, isZip: true });
-      } else {
-        // Individual downloads are tricky for many files, usually we'd zip them anyway
-        // or trigger multiple downloads. ZIP is more professional for splitting multi-page.
-        const content = await zip.generateAsync({ type: 'blob' });
-        const url = URL.createObjectURL(content);
-        setResult({ url, size: content.size, isZip: true });
-      }
+      const content = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(content);
+      setResult({ url, size: content.size, isZip: true });
     } catch (error) {
       console.error('Split error:', error);
       alert('Error splitting PDF. Check parameters.');
@@ -162,17 +185,17 @@ export default function SplitTool() {
           onReset={() => { setFile(null); setPdfDoc(null); setResult(null); setPreviews([]); }}
         />
        ) : !file ? (
-        <Dropzone onFilesSelected={handleFiles} isProcessing={isSplitting} label="Split PDF Document" />
+        <Dropzone onFilesSelected={handleFiles} isProcessing={isLoadingFile} label="Split PDF Document" />
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
            <div className="lg:col-span-8 space-y-6">
               <div className="flex items-center justify-between px-2">
                  <div className="space-y-1">
                     <h2 className="text-2xl font-black flex items-center gap-3">
                       <Scissors className="w-7 h-7 text-blue-600" />
-                      Split Strategy
+                      Split PDF Pages
                     </h2>
-                    <p className="text-xs font-bold uppercase tracking-widest text-neutral-400">Total {totalPages} Pages Detected</p>
+                    <p className="text-xs font-bold uppercase tracking-widest text-neutral-400">Divide a PDF into separate files or extract specific pages easily.</p>
                  </div>
               </div>
 
@@ -217,7 +240,7 @@ export default function SplitTool() {
                  </div>
                  <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
                    {previews.map((p, i) => (
-                     <div key={i} onClick={() => setPreviewImage(p)} className="aspect-[1/1.414] bg-neutral-100 dark:bg-neutral-800 rounded-lg overflow-hidden border border-neutral-200 dark:border-neutral-700 cursor-zoom-in hover:shadow-lg transition-all">
+                     <div key={i} onClick={() => handlePreview(i)} className="aspect-[1/1.414] bg-neutral-100 dark:bg-neutral-800 rounded-lg overflow-hidden border border-neutral-200 dark:border-neutral-700 cursor-zoom-in hover:shadow-lg transition-all">
                        <img src={p} className="w-full h-full object-cover" alt={`Preview ${i+1}`} />
                      </div>
                    ))}
@@ -225,22 +248,36 @@ export default function SplitTool() {
               </div>
            </div>
 
-           <ImageViewer src={previewImage || ''} isOpen={!!previewImage} onClose={() => setPreviewImage(null)} />
+           <ImageViewer src={highResPreview || previewImage || ''} isOpen={!!previewImage} onClose={() => { setPreviewImage(null); setHighResPreview(null); }} />
 
            <div className="lg:col-span-4 space-y-6">
-              <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[32px] p-8 shadow-xl shadow-black/5 space-y-8 sticky top-8">
+              <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[32px] p-8 shadow-xl shadow-black/5 space-y-8">
                  <div className="space-y-6">
-                    <motion.div 
+                     <motion.div 
                       layout
-                      className="group relative bg-white dark:bg-neutral-900 rounded-2xl p-3 border border-neutral-200 dark:border-neutral-800 flex items-center gap-4 transition-all hover:border-blue-500 mb-6"
+                      className={cn(
+                        "group relative bg-white dark:bg-neutral-900 rounded-2xl p-3 border border-neutral-200 dark:border-neutral-800 flex items-center gap-4 transition-all hover:border-blue-500 mb-6",
+                        isLoadingFile && "opacity-70 border-blue-200 bg-blue-50/10"
+                      )}
                     >
-                      <div className="w-16 aspect-[1/1.414] bg-neutral-50 dark:bg-neutral-800 rounded-lg overflow-hidden border border-neutral-100 dark:border-neutral-800 flex-shrink-0 flex items-center justify-center">
-                        <FileText className="w-8 h-8 text-blue-600/30" />
+                      <div className="w-16 aspect-[1/1.414] bg-neutral-50 dark:bg-neutral-800 rounded-lg overflow-hidden border border-neutral-100 dark:border-neutral-800 flex-shrink-0 flex items-center justify-center relative">
+                        {isLoadingFile ? (
+                          <div className="absolute inset-0 flex items-center justify-center bg-blue-500/5">
+                            <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
+                          </div>
+                        ) : (
+                          <FileText className="w-8 h-8 text-blue-600/30" />
+                        )}
                       </div>
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-[10px] font-black uppercase text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded">Active</span>
+                          <span className="text-[10px] font-black uppercase text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded">
+                            {isLoadingFile ? 'Processing' : 'Active'}
+                          </span>
+                          {isLoadingFile && (
+                            <span className="text-[8px] font-black uppercase tracking-widest text-blue-500 animate-pulse">Analyzing...</span>
+                          )}
                         </div>
                         <p className="text-xs font-black uppercase text-neutral-900 dark:text-white truncate">{file.name}</p>
                         <p className="text-[10px] font-bold text-neutral-400 uppercase">{formatBytes(file.size)}</p>
@@ -248,8 +285,9 @@ export default function SplitTool() {
 
                       <div className="flex items-center pr-2">
                         <button 
+                          disabled={isLoadingFile}
                           onClick={() => { setFile(null); setPdfDoc(null); setResult(null); setPreviews([]); }}
-                          className="w-8 h-8 flex items-center justify-center bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:text-red-600 transition-all rounded-lg border border-neutral-200/50 dark:border-neutral-700/50"
+                          className="w-8 h-8 flex items-center justify-center bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:text-red-600 transition-all rounded-lg border border-neutral-200/50 dark:border-neutral-700/50 disabled:opacity-50"
                           title="Remove"
                         >
                           <X className="w-4 h-4" />
@@ -283,21 +321,7 @@ export default function SplitTool() {
                          </div>
                        )}
 
-                       <div className="space-y-2">
-                          <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Output Container</p>
-                          <div className="grid grid-cols-2 gap-2">
-                             {['zip', 'individual'].map(fmt => (
-                               <button 
-                                 key={fmt} 
-                                 onClick={() => setOutputFormat(fmt as any)}
-                                 className={cn(
-                                   "py-2 rounded-xl border-2 font-bold text-[8px] uppercase tracking-widest transition-all",
-                                   outputFormat === fmt ? "border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-600" : "border-neutral-100 dark:border-neutral-800 text-neutral-400"
-                                 )}
-                               >{fmt === 'zip' ? 'Bundled ZIP' : 'Loose PDFs'}</button>
-                             ))}
-                          </div>
-                       </div>
+
                     </div>
                  </div>
 
@@ -307,8 +331,8 @@ export default function SplitTool() {
                       disabled={isSplitting}
                       className="w-full py-5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl shadow-xl shadow-blue-500/20 active:scale-95 transition-all flex items-center justify-center gap-3"
                     >
-                      {isSplitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
-                      {isSplitting ? 'Segmenting...' : 'Export Splitted Data'}
+                      {isSplitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Scissors className="w-5 h-5" />}
+                      {isSplitting ? 'SPLITTING...' : 'SPLIT'}
                     </button>
                     <div className="mt-4 flex items-center justify-center gap-2 text-[8px] font-black uppercase text-neutral-400 tracking-[0.2em]">
                        <Shield className="w-3 h-3" />

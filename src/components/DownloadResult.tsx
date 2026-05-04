@@ -56,14 +56,14 @@ export function DownloadResult({ filename, size, onDownload, onReset, title = "P
                className="w-full py-5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl shadow-xl shadow-blue-500/20 active:scale-95 transition-all flex items-center justify-center gap-3"
              >
                <Download className="w-6 h-6" />
-               Download Document
+               DOWNLOAD
              </button>
              <button 
                onClick={onReset}
                className="w-full py-4 text-neutral-400 hover:text-neutral-600 dark:hover:text-white font-bold transition-all flex items-center justify-center gap-2"
              >
                <RotateCcw className="w-4 h-4" />
-               Process Another File
+               RESET
              </button>
           </div>
         </div>

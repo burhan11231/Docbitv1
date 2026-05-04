@@ -1,5 +1,5 @@
 import { 
-  FileStack, 
+  Files,
   Combine, 
   Scissors, 
   Image as ImageIcon, 
@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import React from 'react';
 
-export type ToolCategory = 'organize' | 'edit' | 'convert' | 'optimize';
+export type ToolCategory = 'edit' | 'convert' | 'optimize';
 
 export interface PDFTool {
   id: string;
@@ -21,14 +21,6 @@ export interface PDFTool {
 
 export const TOOLS: PDFTool[] = [
   {
-    id: 'organize',
-    name: 'PDF Organizer',
-    description: 'Reorder, rotate, delete, or duplicate pages with a live preview.',
-    icon: <FileStack className="w-6 h-6" />,
-    category: 'organize',
-    href: '/tool/organize',
-  },
-  {
     id: 'img-to-pdf',
     name: 'Image to PDF',
     description: 'Convert images (JPG, PNG) into a polished PDF document.',
@@ -40,7 +32,7 @@ export const TOOLS: PDFTool[] = [
     id: 'pdf-to-img',
     name: 'PDF to Image',
     description: 'Convert PDF pages into high-quality JPG or PNG images.',
-    icon: <ImageIcon className="w-6 h-6" />,
+    icon: <Files className="w-6 h-6" />,
     category: 'convert',
     href: '/tool/pdf-to-img',
   },
@@ -49,7 +41,7 @@ export const TOOLS: PDFTool[] = [
     name: 'Merge PDF',
     description: 'Combine multiple PDF files into one single document.',
     icon: <Combine className="w-6 h-6" />,
-    category: 'organize',
+    category: 'edit',
     href: '/tool/merge',
   },
   {
@@ -57,7 +49,7 @@ export const TOOLS: PDFTool[] = [
     name: 'Split PDF',
     description: 'Separate one page or a whole set for easy extraction.',
     icon: <Scissors className="w-6 h-6" />,
-    category: 'organize',
+    category: 'edit',
     href: '/tool/split',
   },
 ];

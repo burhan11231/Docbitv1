@@ -5,11 +5,12 @@ import { Home } from './components/Home';
 import { TOOLS } from './constants/tools';
 
 // Lazy load tools
-const OrganizerTool = lazy(() => import('./components/tools/OrganizerTool'));
 const MergeTool = lazy(() => import('./components/tools/MergeTool'));
 const SplitTool = lazy(() => import('./components/tools/SplitTool'));
 const PdfToImgTool = lazy(() => import('./components/tools/PdfToImgTool'));
 const ImgToPdfTool = lazy(() => import('./components/tools/ImgToPdfTool'));
+const PrivacyPolicy = lazy(() => import('./components/PrivacyPolicy'));
+const Terms = lazy(() => import('./components/Terms'));
 
 export default function App() {
   const location = useLocation();
@@ -41,11 +42,12 @@ export default function App() {
       }>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/tool/organize" element={<OrganizerTool />} />
           <Route path="/tool/merge" element={<MergeTool />} />
           <Route path="/tool/split" element={<SplitTool />} />
           <Route path="/tool/pdf-to-img" element={<PdfToImgTool />} />
           <Route path="/tool/img-to-pdf" element={<ImgToPdfTool />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<Terms />} />
         </Routes>
       </Suspense>
     </Layout>

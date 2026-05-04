@@ -13,8 +13,8 @@ import {
   RotateCw,
   Plus,
   Loader2,
+  Wand2,
   Settings2,
-  Hash,
   Layout,
   Palette,
   Shield,
@@ -24,6 +24,7 @@ import { motion } from 'motion/react';
 import { readFileAsArrayBuffer, cn, formatBytes } from '../../lib/utils';
 import { DownloadResult } from '../DownloadResult';
 import { ImageViewer } from '../ImageViewer';
+import { ColorPickerModal } from '../ColorPickerModal';
 
 type FitMode = 'fit' | 'fill' | 'stretch';
 type PageSize = 'A4' | 'A3' | 'Letter' | 'Custom';
@@ -34,11 +35,13 @@ interface ImgData {
   file: File;
   preview: string;
   rotation: number;
+  status: 'ready' | 'processing';
 }
 
 export default function ImgToPdfTool() {
   const [images, setImages] = useState<ImgData[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isAddingFiles, setIsAddingFiles] = useState(false);
   
   // Layout Settings
   const [fitMode, setFitMode] = useState<FitMode>('fit');
@@ -48,10 +51,9 @@ export default function ImgToPdfTool() {
   const [customHeight, setCustomHeight] = useState(842);
   const [margin, setMargin] = useState({ top: 0, bottom: 0, left: 0, right: 0 });
   const [bgColor, setBgColor] = useState('#ffffff');
+  const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
   
   // Advanced Options
-  const [showPageNumbers, setShowPageNumbers] = useState(false);
-  const [pageNumberPos, setPageNumberPos] = useState({ vertical: 'bottom', horizontal: 'center' });
   const [quality, setQuality] = useState<'high' | 'medium' | 'small'>('medium');
   const [spacing, setSpacing] = useState(0);
 
@@ -59,19 +61,32 @@ export default function ImgToPdfTool() {
   const [previewItem, setPreviewItem] = useState<ImgData | null>(null);
 
   const handleFiles = async (files: File[]) => {
-    setIsProcessing(true); // Re-use isProcessing or add a new state
+    setIsAddingFiles(true);
     
-    // Small delay to allow the loading animation to show
-    await new Promise(resolve => setTimeout(resolve, 800));
-
-    const newImages = files.map(f => ({
+    // Create pending items
+    const pending: ImgData[] = files.map(f => ({
       id: Math.random().toString(36).substr(2, 9),
       file: f,
-      preview: URL.createObjectURL(f),
-      rotation: 0
+      preview: '',
+      rotation: 0,
+      status: 'processing'
     }));
-    setImages(prev => [...prev, ...newImages]);
-    setIsProcessing(false);
+
+    setImages(prev => [...prev, ...pending]);
+    setResult(null);
+
+    // Process each image (generate preview)
+    for (const item of pending) {
+      // Small simulated delay for organic feel
+      await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 400));
+      
+      const preview = URL.createObjectURL(item.file);
+      setImages(prev => prev.map(img => 
+        img.id === item.id ? { ...img, preview, status: 'ready' } : img
+      ));
+    }
+    
+    setIsAddingFiles(false);
   };
 
   const handleRotate = (id: string) => {
@@ -213,30 +228,6 @@ export default function ImgToPdfTool() {
           width: drawWidth,
           height: drawHeight,
         });
-
-        // Page Numbers
-        if (showPageNumbers) {
-          const text = `Page ${i + 1}`;
-          const textSize = 10;
-          const textWidth = font.widthOfTextAtSize(text, textSize);
-          let tx = 0;
-          let ty = 0;
-
-          if (pageNumberPos.horizontal === 'left') tx = 20;
-          else if (pageNumberPos.horizontal === 'center') tx = (pWidth - textWidth) / 2;
-          else tx = pWidth - textWidth - 20;
-
-          if (pageNumberPos.vertical === 'top') ty = pHeight - 30;
-          else ty = 20;
-
-          page.drawText(text, {
-            x: tx,
-            y: ty,
-            size: textSize,
-            font,
-            color: rgb(0.5, 0.5, 0.5),
-          });
-        }
       }
 
       const pdfBytes = await pdfDoc.save();
@@ -272,24 +263,24 @@ export default function ImgToPdfTool() {
         <Dropzone 
           onFilesSelected={handleFiles} 
           maxFiles={50} 
-          isProcessing={isProcessing}
+          isProcessing={isAddingFiles}
           accept={{ 'image/png': ['.png'], 'image/jpeg': ['.jpg', '.jpeg'], 'image/webp': ['.webp'] }}
           label="Select Images (JPG, PNG, WebP)" 
         />
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
            <div className="lg:col-span-8 space-y-6">
               <div className="flex items-center justify-between px-2">
                 <div className="space-y-1">
                   <h2 className="text-2xl font-black flex items-center gap-3">
                     <FileImage className="w-7 h-7 text-blue-600" />
-                    Image Flow
+                    Convert Images to PDF
                   </h2>
-                  <p className="text-xs font-bold uppercase tracking-widest text-neutral-400">Icon-based ordering • Real-time preview</p>
+                  <p className="text-xs font-bold uppercase tracking-widest text-neutral-400">Turn multiple images into a single high-quality PDF in seconds.</p>
                 </div>
                 <label className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl transition-all shadow-lg shadow-blue-500/20 cursor-pointer active:scale-95 text-sm">
                   <Plus className="w-4 h-4" />
-                  Add Images
+                  ADD
                   <input type="file" multiple className="hidden" accept="image/*" onChange={(e) => e.target.files && handleFiles(Array.from(e.target.files))} />
                 </label>
               </div>
@@ -319,7 +310,7 @@ export default function ImgToPdfTool() {
            />
 
            <div className="lg:col-span-4 space-y-6">
-              <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[32px] p-8 shadow-xl shadow-black/5 space-y-8 sticky top-8 max-h-[calc(100vh-8rem)] overflow-y-auto no-scrollbar">
+              <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[32px] p-8 shadow-xl shadow-black/5 space-y-8">
                  <div className="space-y-8">
                     {/* Layout Settings */}
                     <div className="space-y-6">
@@ -413,13 +404,33 @@ export default function ImgToPdfTool() {
                            </div>
                         </div>
 
-                        <div className="space-y-2">
-                           <p className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">Background</p>
-                           <input 
-                             type="color" 
-                             value={bgColor} 
-                             onChange={(e) => setBgColor(e.target.value)} 
-                             className="w-full h-10 rounded-xl cursor-pointer border-none bg-neutral-100 dark:bg-neutral-800 p-1"
+                        <div className="space-y-3">
+                           <p className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">Canvas Background</p>
+                           <button 
+                             onClick={() => setIsColorPickerOpen(true)}
+                             className="w-full flex items-center gap-3 p-3 bg-neutral-50 dark:bg-neutral-800 rounded-2xl group hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-all border border-transparent hover:border-neutral-200 dark:hover:border-neutral-700"
+                           >
+                             <div 
+                               className="w-10 h-10 rounded-xl shadow-inner border border-black/5 flex items-center justify-center"
+                               style={{ backgroundColor: bgColor }}
+                             >
+                               <div className={cn(
+                                 "w-4 h-4 rounded-full",
+                                 parseInt(bgColor.replace('#', ''), 16) > 0xffffff / 2 ? "bg-black/10" : "bg-white/20"
+                               )} />
+                             </div>
+                             <div className="flex-1 text-left">
+                                <p className="text-[10px] font-black uppercase text-neutral-900 dark:text-white">{bgColor}</p>
+                                <p className="text-[8px] font-bold text-neutral-400 uppercase tracking-widest">Tap to refine</p>
+                             </div>
+                           </button>
+
+                           <ColorPickerModal 
+                             isOpen={isColorPickerOpen}
+                             onClose={() => setIsColorPickerOpen(false)}
+                             color={bgColor}
+                             onChange={setBgColor}
+                             title="Background Color"
                            />
                         </div>
                       </div>
@@ -433,42 +444,6 @@ export default function ImgToPdfTool() {
                       </div>
 
                       <div className="space-y-5">
-                         <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                               <Hash className="w-3 h-3 text-neutral-400" />
-                               <span className="text-[10px] font-black uppercase text-neutral-500 tracking-wider">Page Numbers</span>
-                            </div>
-                            <button 
-                              onClick={() => setShowPageNumbers(!showPageNumbers)}
-                              className={cn(
-                                "w-10 h-5 rounded-full p-1 transition-all",
-                                showPageNumbers ? "bg-blue-600 flex-row-reverse" : "bg-neutral-200 dark:bg-neutral-800 flex-row"
-                              )}
-                            >
-                               <div className="w-3 h-3 rounded-full bg-white shadow-sm" />
-                            </button>
-                         </div>
-
-                         {showPageNumbers && (
-                           <div className="p-4 bg-neutral-50 dark:bg-neutral-800/50 rounded-2xl space-y-4 animate-in slide-in-from-top-2">
-                              <div className="space-y-2">
-                                 <p className="text-[8px] font-bold text-neutral-400 uppercase tracking-widest">Position (X-Y)</p>
-                                 <div className="grid grid-cols-3 gap-1">
-                                    {['left', 'center', 'right'].map(h => (
-                                      <button 
-                                        key={h}
-                                        onClick={() => setPageNumberPos(prev => ({ ...prev, horizontal: h }))}
-                                        className={cn(
-                                          "py-1.5 rounded-lg border text-[8px] font-bold uppercase transition-all",
-                                          pageNumberPos.horizontal === h ? "border-blue-600 bg-white dark:bg-neutral-700 text-blue-600" : "border-neutral-200 dark:border-neutral-800 text-neutral-400"
-                                        )}
-                                      >{h}</button>
-                                    ))}
-                                 </div>
-                              </div>
-                           </div>
-                         )}
-
                          <div className="space-y-2">
                             <div className="flex items-center gap-2">
                                <ImageIcon className="w-3 h-3 text-neutral-400" />
@@ -497,8 +472,8 @@ export default function ImgToPdfTool() {
                       disabled={isProcessing}
                       className="w-full py-5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl shadow-xl shadow-blue-500/20 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
                     >
-                      {isProcessing ? <Loader2 className="w-6 h-6 animate-spin" /> : <Download className="w-6 h-6" />}
-                      {isProcessing ? 'Processing Engine...' : 'Generate PDF'}
+                      {isProcessing ? <Loader2 className="w-6 h-6 animate-spin" /> : <Wand2 className="w-6 h-6" />}
+                      {isProcessing ? 'GENERATING...' : 'GENERATE'}
                     </button>
                     <div className="mt-4 flex items-center justify-center gap-2 text-[8px] font-black uppercase text-neutral-400 tracking-[0.2em]">
                        <Shield className="w-3 h-3" />
@@ -524,45 +499,62 @@ function ImgItem({ img, index, isFirst, isLast, handleRotate, removeImg, handleM
   onPreview: (item: ImgData) => void;
   key?: React.Key;
 }) {
+  const isProcessing = img.status === 'processing';
+
   return (
     <motion.div 
       layout
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.9 }}
-      className="group relative bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-3 flex items-center gap-4 transition-all hover:border-blue-500 hover:shadow-lg"
+      className={cn(
+        "group relative bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-3 flex items-center gap-4 transition-all hover:border-blue-500 hover:shadow-lg",
+        isProcessing && "opacity-70 border-blue-200 dark:border-blue-900/50 bg-blue-50/10"
+      )}
     >
       <div 
-        onClick={() => onPreview(img)}
-        className="relative w-24 aspect-[1/1.414] bg-neutral-50 dark:bg-neutral-800 rounded-lg overflow-hidden border border-neutral-100 dark:border-neutral-800 flex-shrink-0 cursor-zoom-in"
+        onClick={() => !isProcessing && onPreview(img)}
+        className={cn(
+          "relative w-24 aspect-[1/1.414] bg-neutral-50 dark:bg-neutral-800 rounded-lg overflow-hidden border border-neutral-100 dark:border-neutral-800 flex-shrink-0 flex items-center justify-center",
+          !isProcessing && "cursor-zoom-in"
+        )}
       >
-        <motion.img 
-          src={img.preview} 
-          animate={{ 
-            rotate: img.rotation,
-            scale: img.rotation % 180 === 0 ? 1 : 0.707
-          }}
-          alt="Preview" 
-          className="w-full h-full object-contain pointer-events-none" 
-        />
+        {isProcessing ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-blue-500/5 backdrop-blur-[1px]">
+            <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
+          </div>
+        ) : (
+          <motion.img 
+            src={img.preview} 
+            animate={{ 
+              rotate: img.rotation,
+              scale: img.rotation % 180 === 0 ? 1 : 0.707
+            }}
+            alt="Preview" 
+            className="w-full h-full object-contain pointer-events-none" 
+          />
+        )}
       </div>
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-2">
           <span className="text-[10px] font-black uppercase text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded">#{index + 1}</span>
           <p className="text-sm font-bold truncate text-neutral-900 dark:text-neutral-100">{img.file.name}</p>
+          {isProcessing && (
+            <span className="text-[8px] font-black uppercase tracking-widest text-blue-500 animate-pulse">Processing...</span>
+          )}
         </div>
         
         <div className="flex items-center gap-1">
            <button 
-              disabled={isFirst}
+              disabled={isFirst || isProcessing}
               onClick={() => handleMove(img.id, 'up')}
               className="p-1.5 text-neutral-300 hover:text-blue-600 disabled:opacity-0 transition-all hover:bg-neutral-50 dark:hover:bg-neutral-800 rounded-lg"
             >
               <ArrowUp className="w-4 h-4" />
             </button>
             <button 
-              disabled={isLast}
+              disabled={isLast || isProcessing}
               onClick={() => handleMove(img.id, 'down')}
               className="p-1.5 text-neutral-300 hover:text-blue-600 disabled:opacity-0 transition-all hover:bg-neutral-50 dark:hover:bg-neutral-800 rounded-lg"
             >
@@ -574,15 +566,17 @@ function ImgItem({ img, index, isFirst, isLast, handleRotate, removeImg, handleM
 
       <div className="flex items-center gap-1.5 pr-2">
         <button 
+          disabled={isProcessing}
           onClick={() => handleRotate(img.id)}
-          className="w-10 h-10 flex items-center justify-center bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:text-blue-600 hover:bg-white dark:hover:bg-neutral-700 transition-all rounded-xl shadow-sm border border-neutral-200/50 dark:border-neutral-700/50"
+          className="w-10 h-10 flex items-center justify-center bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:text-blue-600 hover:bg-white dark:hover:bg-neutral-700 transition-all rounded-xl shadow-sm border border-neutral-200/50 dark:border-neutral-700/50 disabled:opacity-50"
           title="Rotate"
         >
           <RotateCw className="w-4 h-4" />
         </button>
         <button 
+          disabled={isProcessing}
           onClick={() => removeImg(img.id)}
-          className="w-10 h-10 flex items-center justify-center bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-500 hover:text-white transition-all rounded-xl shadow-sm border border-red-200/50 dark:border-red-800/50"
+          className="w-10 h-10 flex items-center justify-center bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-500 hover:text-white transition-all rounded-xl shadow-sm border border-red-200/50 dark:border-red-800/50 disabled:opacity-50"
           title="Remove"
         >
           <Trash2 className="w-4 h-4" />

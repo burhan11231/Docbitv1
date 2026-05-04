@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { Dropzone } from '../Dropzone';
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { 
   Trash2, 
   ArrowUp, 
   ArrowDown, 
   Download, 
   Loader2, 
+  Wand2,
   FileText, 
   Plus, 
   Combine, 
@@ -23,11 +24,13 @@ interface FileData {
   id: string;
   file: File;
   size: number;
+  status: 'ready' | 'processing';
 }
 
 export default function MergeTool() {
   const [files, setFiles] = useState<FileData[]>([]);
   const [isMerging, setIsMerging] = useState(false);
+  const [isAddingFiles, setIsAddingFiles] = useState(false);
   const [result, setResult] = useState<{ url: string; size: number } | null>(null);
 
   // Options
@@ -35,17 +38,26 @@ export default function MergeTool() {
   const [enableCompression, setEnableCompression] = useState(false);
 
   const handleFiles = async (newFiles: File[]) => {
-    setIsMerging(true);
-    await new Promise(resolve => setTimeout(resolve, 800));
+    setIsAddingFiles(true);
     
-    const formatted: FileData[] = newFiles.map(f => ({
+    // Create pending items
+    const pending: FileData[] = newFiles.map(f => ({
       id: `f-${Math.random().toString(36).substr(2, 9)}`,
       file: f,
-      size: f.size
+      size: f.size,
+      status: 'processing'
     }));
-    setFiles(prev => [...prev, ...formatted]);
+
+    setFiles(prev => [...prev, ...pending]);
     setResult(null);
-    setIsMerging(false);
+
+    // Process each file with a slight staggered delay for UX
+    for (const item of pending) {
+      await new Promise(resolve => setTimeout(resolve, 400 + Math.random() * 600));
+      setFiles(prev => prev.map(f => f.id === item.id ? { ...f, status: 'ready' } : f));
+    }
+    
+    setIsAddingFiles(false);
   };
 
   const removeFile = (id: string) => {
@@ -70,6 +82,8 @@ export default function MergeTool() {
 
     try {
       const mergedPdf = await PDFDocument.create();
+      const font = await mergedPdf.embedFont(StandardFonts.Helvetica);
+      let pageCounter = 0;
 
       for (const fileData of files) {
         const bytes = await readFileAsArrayBuffer(fileData.file);
@@ -77,12 +91,11 @@ export default function MergeTool() {
         
         const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
         
-        for (const page of copiedPages) {
+        for (const copiedPage of copiedPages) {
           if (normalizeSize) {
-            // A4 normalization as example
-            page.setSize(595, 842);
+            copiedPage.setSize(595, 842);
           }
-          mergedPdf.addPage(page);
+          mergedPdf.addPage(copiedPage);
         }
       }
 
@@ -113,21 +126,21 @@ export default function MergeTool() {
           onReset={() => { setFiles([]); setResult(null); }} 
         />
       ) : files.length === 0 ? (
-        <Dropzone onFilesSelected={handleFiles} maxFiles={20} isProcessing={isMerging} label="Merge PDFs - Icon Order Only" />
+        <Dropzone onFilesSelected={handleFiles} maxFiles={20} isProcessing={isAddingFiles} label="Merge PDFs - Local Processing" />
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
            <div className="lg:col-span-8 space-y-6">
               <div className="flex items-center justify-between px-2">
                  <div className="space-y-1">
                     <h2 className="text-2xl font-black flex items-center gap-3">
                       <Combine className="w-7 h-7 text-blue-600" />
-                      Merge Sequence
+                      Merge PDF Files
                     </h2>
-                    <p className="text-xs font-bold uppercase tracking-widest text-neutral-400">Order from top down</p>
+                    <p className="text-xs font-bold uppercase tracking-widest text-neutral-400">Combine multiple PDFs into a single document in seconds.</p>
                  </div>
                  <label className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl cursor-pointer shadow-lg shadow-blue-500/20 active:scale-95 text-xs uppercase tracking-widest transition-all">
                    <Plus className="w-4 h-4" />
-                   Append Files
+                   ADD
                    <input type="file" multiple className="hidden" accept="application/pdf" onChange={(e) => e.target.files && handleFiles(Array.from(e.target.files))} />
                  </label>
               </div>
@@ -139,28 +152,40 @@ export default function MergeTool() {
                   layout
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="group relative bg-white dark:bg-neutral-900 rounded-2xl p-3 border border-neutral-200 dark:border-neutral-800 hover:border-blue-500 hover:shadow-lg transition-all flex items-center gap-4"
+                  className={cn(
+                    "group relative bg-white dark:bg-neutral-900 rounded-2xl p-3 border border-neutral-200 dark:border-neutral-800 hover:border-blue-500 hover:shadow-lg transition-all flex items-center gap-4",
+                    fileData.status === 'processing' && "opacity-70 border-blue-200 dark:border-blue-900/50 bg-blue-50/10"
+                  )}
                 >
-                  <div className="w-16 aspect-[1/1.414] bg-neutral-50 dark:bg-neutral-800 rounded-lg overflow-hidden border border-neutral-100 dark:border-neutral-800 flex-shrink-0 flex items-center justify-center">
-                    <FileText className="w-8 h-8 text-blue-600/30" />
+                  <div className="w-16 aspect-[1/1.414] bg-neutral-50 dark:bg-neutral-800 rounded-lg overflow-hidden border border-neutral-100 dark:border-neutral-800 flex-shrink-0 flex items-center justify-center relative">
+                    {fileData.status === 'processing' ? (
+                      <div className="absolute inset-0 flex items-center justify-center bg-blue-500/5 backdrop-blur-[1px]">
+                        <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
+                      </div>
+                    ) : (
+                      <FileText className="w-8 h-8 text-blue-600/30" />
+                    )}
                   </div>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-[10px] font-black uppercase text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded">#{idx + 1}</span>
                       <p className="text-sm font-bold truncate text-neutral-900 dark:text-neutral-100">{fileData.file.name}</p>
+                      {fileData.status === 'processing' && (
+                        <span className="text-[8px] font-black uppercase tracking-widest text-blue-500 animate-pulse">Processing...</span>
+                      )}
                     </div>
                     
                     <div className="flex items-center gap-1">
                        <button 
-                          disabled={idx === 0}
+                          disabled={idx === 0 || fileData.status === 'processing'}
                           onClick={() => handleMove(fileData.id, 'up')}
                           className="p-1.5 text-neutral-300 hover:text-blue-600 disabled:opacity-0 transition-all hover:bg-neutral-50 dark:hover:bg-neutral-800 rounded-lg"
                         >
                           <ArrowUp className="w-4 h-4" />
                         </button>
                         <button 
-                          disabled={idx === files.length - 1}
+                          disabled={idx === files.length - 1 || fileData.status === 'processing'}
                           onClick={() => handleMove(fileData.id, 'down')}
                           className="p-1.5 text-neutral-300 hover:text-blue-600 disabled:opacity-0 transition-all hover:bg-neutral-50 dark:hover:bg-neutral-800 rounded-lg"
                         >
@@ -173,7 +198,8 @@ export default function MergeTool() {
                   <div className="flex items-center pr-2">
                     <button 
                       onClick={() => removeFile(fileData.id)}
-                      className="w-10 h-10 flex items-center justify-center bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-500 hover:text-white transition-all rounded-xl shadow-sm border border-red-200/50 dark:border-red-800/50"
+                      disabled={fileData.status === 'processing'}
+                      className="w-10 h-10 flex items-center justify-center bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-500 hover:text-white transition-all rounded-xl shadow-sm border border-red-200/50 dark:border-red-800/50 disabled:opacity-50"
                       title="Remove"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -185,7 +211,7 @@ export default function MergeTool() {
            </div>
 
            <div className="lg:col-span-4 space-y-6">
-              <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[32px] p-8 shadow-xl shadow-black/5 space-y-8 sticky top-8">
+              <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[32px] p-8 shadow-xl shadow-black/5 space-y-8">
                  <div className="space-y-6">
                     <h3 className="text-[10px] font-black tracking-widest uppercase text-blue-600">Merge Options</h3>
                     
@@ -241,8 +267,8 @@ export default function MergeTool() {
                       disabled={isMerging || files.length < 2}
                       className="w-full py-5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-black rounded-2xl shadow-xl shadow-blue-500/20 active:scale-95 transition-all flex items-center justify-center gap-3"
                     >
-                      {isMerging ? <Loader2 className="w-5 h-5 animate-spin" /> : <Combine className="w-5 h-5" />}
-                      {isMerging ? 'Unifying Logic...' : 'Merge & Download'}
+                      {isMerging ? <Loader2 className="w-5 h-5 animate-spin" /> : <Wand2 className="w-5 h-5" />}
+                      {isMerging ? 'MERGING...' : 'MERGE'}
                     </button>
                     <div className="mt-4 flex items-center justify-center gap-2 text-[8px] font-black uppercase text-neutral-400 tracking-[0.2em]">
                        <Shield className="w-3 h-3" />

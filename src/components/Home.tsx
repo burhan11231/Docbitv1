@@ -2,8 +2,8 @@ import React from 'react';
 import { motion, Variants } from 'motion/react';
 import { 
   ShieldCheck, 
-  Zap, 
   Lock, 
+  Zap,
   ArrowRight, 
   ChevronRight,
   Globe,
@@ -125,44 +125,14 @@ export function Home() {
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "-100px" }}
-            className="grid grid-cols-1 md:grid-cols-6 gap-4"
+            className="grid grid-cols-1 md:grid-cols-4 gap-4"
           >
-            {/* Featured Item: Organizer */}
-            <motion.div variants={itemVariants} className="md:col-span-4 group h-[400px]">
-              <Link 
-                to="/tool/organize" 
-                className="block h-full relative overflow-hidden rounded-[40px] bg-blue-600 dark:bg-blue-600 p-10 group-hover:scale-[1.01] transition-all duration-500 shadow-2xl shadow-blue-500/20"
-              >
-                <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:scale-125 transition-transform duration-700" />
-                
-                <div className="relative h-full flex flex-col justify-between">
-                  <div className="w-16 h-16 rounded-3xl bg-white/20 backdrop-blur-xl flex items-center justify-center text-white">
-                    <Zap className="w-8 h-8 fill-white" />
-                  </div>
-                  
-                  <div className="space-y-4 max-w-md">
-                    <div className="text-[10px] font-black uppercase tracking-widest text-blue-100">Most Powerful</div>
-                    <h3 className="text-4xl font-black tracking-tighter text-white">Visual PDF Organizer</h3>
-                    <p className="text-blue-100/80 font-medium leading-relaxed">
-                      The ultimate page-management tool. Reorder, rotate, and duplicate pages with a high-fidelity live preview.
-                    </p>
-                    <div className="inline-flex items-center gap-2 text-white font-bold text-sm">
-                      Get Started <ChevronRight className="w-4 h-4" />
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            </motion.div>
-
-            {/* Other Tools as Cards */}
-            {TOOLS.filter(t => t.id !== 'organize').map((tool, idx) => (
+            {/* Tools as Cards */}
+            {TOOLS.map((tool) => (
               <motion.div 
                 key={tool.id}
                 variants={itemVariants}
-                className={cn(
-                  "md:col-span-2 group",
-                  idx === 0 ? "md:col-span-2" : "md:col-span-2"
-                )}
+                className="md:col-span-2 group"
               >
                 <Link 
                   to={tool.href}
@@ -289,9 +259,8 @@ export function Home() {
           </div>
           
           <div className="flex items-center gap-8">
-             <Link to="/" className="text-xs font-black uppercase tracking-widest text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors">Twitter</Link>
-             <Link to="/" className="text-xs font-black uppercase tracking-widest text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors">GitHub</Link>
-             <Link to="/" className="text-xs font-black uppercase tracking-widest text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors">Contact</Link>
+             <Link to="/privacy" className="text-xs font-black uppercase tracking-widest text-neutral-500 hover:text-blue-600 transition-colors">Privacy Policy</Link>
+             <Link to="/terms" className="text-xs font-black uppercase tracking-widest text-neutral-500 hover:text-blue-600 transition-colors">Terms of Service</Link>
           </div>
 
           <div className="text-xs text-neutral-400 font-medium">

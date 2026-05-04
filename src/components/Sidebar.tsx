@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { TOOLS } from '../constants/tools';
 import { cn } from '../lib/utils';
-import { LayoutGrid, ShieldCheck, Moon, Sun } from 'lucide-react';
+import { ShieldCheck, Moon, Sun, FileText, Shield } from 'lucide-react';
 
 interface SidebarProps {
   onSelect?: () => void;
@@ -78,6 +78,36 @@ export function Sidebar({ onSelect }: SidebarProps) {
             {tool.name}
           </Link>
         ))}
+        
+        <div className="py-4">
+          <div className="w-full h-px bg-neutral-100 dark:bg-neutral-800 my-2" />
+          <Link
+            to="/privacy"
+            onClick={onSelect}
+            className={cn(
+              "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all font-medium text-sm group",
+              location.pathname === '/privacy'
+                ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white"
+                : "text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100 hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
+            )}
+          >
+            < Shield className="w-5 h-5 text-neutral-400 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors" />
+            Privacy Policy
+          </Link>
+          <Link
+            to="/terms"
+            onClick={onSelect}
+            className={cn(
+              "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all font-medium text-sm group",
+              location.pathname === '/terms'
+                ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white"
+                : "text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100 hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
+            )}
+          >
+            <FileText className="w-5 h-5 text-neutral-400 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors" />
+            Terms of Service
+          </Link>
+        </div>
       </nav>
 
       <div className="p-4 mt-auto border-t border-neutral-100 dark:border-neutral-800">

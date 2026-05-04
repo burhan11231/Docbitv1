@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { motion, AnimatePresence } from 'motion/react';
-import { FileImage, Scissors, FileDown, Menu, Home as HomeIcon, FileStack, Combine, Image as ImageIcon } from 'lucide-react';
+import { FileImage, Scissors, FileDown, Menu, Home as HomeIcon, Combine, Image as ImageIcon } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '../lib/utils';
 
@@ -17,7 +17,6 @@ export function Layout({ children, activeToolName, onReset }: LayoutProps) {
   const location = useLocation();
 
   const navItems = [
-    { label: 'Organize', icon: <FileStack className="w-5 h-5" />, href: '/tool/organize' },
     { label: 'Img ➔ PDF', icon: <FileImage className="w-5 h-5" />, href: '/tool/img-to-pdf' },
     { label: 'PDF ➔ Img', icon: <ImageIcon className="w-5 h-5" />, href: '/tool/pdf-to-img' },
     { label: 'Merge', icon: <Combine className="w-5 h-5" />, href: '/tool/merge' },
