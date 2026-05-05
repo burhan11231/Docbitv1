@@ -140,7 +140,7 @@ export function Home() {
             className="relative z-10 pt-12 flex flex-wrap justify-center items-center gap-x-8 gap-y-4 text-[10px] font-black uppercase tracking-widest text-neutral-800/60 dark:text-neutral-400"
           >
             <span className="flex items-center gap-2 border-r border-black/10 dark:border-white/10 pr-8">No server uploads</span>
-            <span className="flex items-center gap-2 border-r border-black/10 dark:border-white/10 pr-8">No signup</span>
+          
             <span className="flex items-center gap-2">Instant processing</span>
           </motion.div>
         </section>
