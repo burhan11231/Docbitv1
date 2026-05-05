@@ -17,9 +17,9 @@ export default defineConfig(({mode}) => {
           globPatterns: ['**/*.{js,css,html,ico,png,svg}']
         },
         manifest: {
-          name: 'DocBit - Precision PDF Workbench',
+          name: 'DocBit - Free PDF Tools',
           short_name: 'DocBit',
-          description: 'High-performance, client-side PDF processing engine.',
+          description: 'Free PDF Tools, On Your Device. Fast, private, and local PDF processing.',
           theme_color: '#2563eb',
           background_color: '#ffffff',
           display: 'standalone',

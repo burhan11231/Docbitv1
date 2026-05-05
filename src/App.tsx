@@ -20,7 +20,15 @@ const Help = lazy(() => import('./components/Help'));
 const NotFound = lazy(() => import('./components/NotFound'));
 
 export default function App() {
-  const [isLaunching, setIsLaunching] = useState(true);
+  const [isLaunching, setIsLaunching] = useState(() => {
+    // Check if running in standalone mode (PWA)
+    if (typeof window !== 'undefined') {
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                          (window.navigator as any).standalone === true;
+      return isStandalone;
+    }
+    return false;
+  });
   const location = useLocation();
   const activeTool = TOOLS.find(t => t.href === location.pathname);
 
