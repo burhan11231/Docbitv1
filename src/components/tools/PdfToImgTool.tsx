@@ -26,6 +26,7 @@ import { DownloadResult } from '../DownloadResult';
 import { SEO } from '../SEO';
 import { ToolInfo } from '../ToolInfo';
 import { ShieldCheck, Zap, Globe } from 'lucide-react';
+import { TOOLS } from '../../constants/tools';
 
 // Configure pdfjs worker
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -37,6 +38,7 @@ interface PageThumbnail {
 }
 
 export default function PdfToImgTool() {
+  const tool = TOOLS.find(t => t.id === 'pdf-to-img')!;
   const [file, setFile] = useState<File | null>(null);
   const [pdfProxy, setPdfProxy] = useState<pdfjs.PDFDocumentProxy | null>(null);
   const [pages, setPages] = useState<PageThumbnail[]>([]);
@@ -191,8 +193,8 @@ export default function PdfToImgTool() {
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 pb-40">
       <SEO 
-        title="Convert PDF to Image Online - Free & High Quality" 
-        description="Extract pages from your PDF as high-quality JPG or PNG images. Fast, secure, and 100% private processing in your browser."
+        title={tool.seoTitle || tool.name} 
+        description={tool.seoDescription || tool.description}
         keywords="pdf to image, convert pdf to jpg, extract images from pdf, pdf to png, docbit"
       />
 

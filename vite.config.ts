@@ -26,15 +26,15 @@ export default defineConfig(({mode}) => {
           orientation: 'any',
           icons: [
             {
-              src: 'icon.svg',
+              src: 'https://res.cloudinary.com/dlesei0kn/image/upload/v1778091387/siteiconmain_jfmywn.jpg',
               sizes: '512x512',
-              type: 'image/svg+xml',
+              type: 'image/jpeg',
               purpose: 'any'
             },
             {
-              src: 'icon.svg',
+              src: 'https://res.cloudinary.com/dlesei0kn/image/upload/v1778091387/siteiconmain_jfmywn.jpg',
               sizes: '512x512',
-              type: 'image/svg+xml',
+              type: 'image/jpeg',
               purpose: 'maskable'
             }
           ]

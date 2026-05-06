@@ -23,6 +23,7 @@ import { readFileAsArrayBuffer, cn, formatBytes } from '../../lib/utils';
 import { DownloadResult } from '../DownloadResult';
 import { SEO } from '../SEO';
 import { ToolInfo } from '../ToolInfo';
+import { TOOLS } from '../../constants/tools';
 
 interface FileData {
   id: string;
@@ -32,6 +33,7 @@ interface FileData {
 }
 
 export default function MergeTool() {
+  const tool = TOOLS.find(t => t.id === 'merge')!;
   const [files, setFiles] = useState<FileData[]>([]);
   const [isMerging, setIsMerging] = useState(false);
   const [isAddingFiles, setIsAddingFiles] = useState(false);
@@ -123,8 +125,8 @@ export default function MergeTool() {
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 pb-40">
       <SEO 
-        title="Merge PDF Files Online - Free & Secure" 
-        description="Merge multiple PDF files into a single document in seconds. 100% private, local processing - your files never leave your device."
+        title={tool.seoTitle || tool.name} 
+        description={tool.seoDescription || tool.description}
         keywords="merge pdf online, combine pdf files, free pdf tools, join pdf documents"
       />
 
@@ -143,7 +145,7 @@ export default function MergeTool() {
             title="PDF Merger"
             steps={[
               { title: "Upload Files", desc: "Select or drag and drop multiple PDF files you want to combine." },
-              { title: "Arrange Order", desc: "Drag and drop to reorder files or use the up/down arrows to get the precise sequence." },
+              { title: "Arrange Order", desc: "Use the up/down arrows to reorder files so you can get the precise sequence." },
               { title: "Merge & Download", desc: "Click Merge to combine them into a single high-quality PDF document instantly." }
             ]}
             benefits={[

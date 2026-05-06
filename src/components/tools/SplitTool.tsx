@@ -22,6 +22,7 @@ import { ImageViewer } from '../ImageViewer';
 import { SEO } from '../SEO';
 import { ToolInfo } from '../ToolInfo';
 import { ShieldCheck, Zap, Globe } from 'lucide-react';
+import { TOOLS } from '../../constants/tools';
 
 // Configure pdfjs worker
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -29,6 +30,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.vers
 type SplitMode = 'all' | 'range';
 
 export default function SplitTool() {
+  const tool = TOOLS.find(t => t.id === 'split')!;
   const [file, setFile] = useState<File | null>(null);
   const [isLoadingFile, setIsLoadingFile] = useState(false);
   const [pdfDoc, setPdfDoc] = useState<any>(null);
@@ -164,8 +166,8 @@ export default function SplitTool() {
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 pb-40 px-4">
       <SEO 
-        title="Split PDF Online - Extract Pages for Free" 
-        description="Divide your PDF into separate files or extract specific pages easily. Faster and safer processing directly in your browser."
+        title={tool.seoTitle || tool.name} 
+        description={tool.seoDescription || tool.description}
         keywords="split pdf, extract pdf pages, free pdf splitter, divide pdf online, docbit"
       />
 
@@ -185,7 +187,7 @@ export default function SplitTool() {
             steps={[
               { title: "Upload PDF", desc: "Select the PDF file you want to split or extract pages from." },
               { title: "Select Mode", desc: "Choose to extract all pages into separate files or define a custom range." },
-              { title: "Split & Zip", desc: "Download your split pages instantly. If splitting into multiple files, we'll pack them in a ZIP." }
+              { title: "Split & Zip", desc: "Download your split pages instantly. We'll pack them in a ZIP." }
             ]}
             benefits={[
               { title: "In-Browser Split", desc: "No uploads. Your document is split locally, ensuring total privacy.", icon: <ShieldCheck className="w-8 h-8" /> },

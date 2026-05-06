@@ -60,7 +60,7 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
           className="relative"
         >
           <div className="w-24 h-24 bg-white dark:bg-neutral-800 rounded-[32px] flex items-center justify-center shadow-2xl shadow-blue-500/10 rotate-3 p-4 border border-neutral-100 dark:border-neutral-700">
-            <img src="/icon.svg" alt="DocBit Logo" className="w-full h-full object-contain" />
+            <img src="https://res.cloudinary.com/dlesei0kn/image/upload/v1778091387/siteiconmain_jfmywn.jpg" alt="DocBit Logo" className="w-full h-full object-contain" />
           </div>
           {/* Animated Glow */}
           <motion.div 

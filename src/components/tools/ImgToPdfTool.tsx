@@ -30,6 +30,7 @@ import { ImageViewer } from '../ImageViewer';
 import { ColorPickerModal } from '../ColorPickerModal';
 import { SEO } from '../SEO';
 import { ToolInfo } from '../ToolInfo';
+import { TOOLS } from '../../constants/tools';
 
 type FitMode = 'fit' | 'fill' | 'stretch';
 type PageSize = 'A4' | 'A3' | 'Letter' | 'Custom';
@@ -44,6 +45,7 @@ interface ImgData {
 }
 
 export default function ImgToPdfTool() {
+  const tool = TOOLS.find(t => t.id === 'img-to-pdf')!;
   const [images, setImages] = useState<ImgData[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isAddingFiles, setIsAddingFiles] = useState(false);
@@ -258,8 +260,8 @@ export default function ImgToPdfTool() {
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 pb-40">
       <SEO 
-        title="Convert Images to PDF Online - Free & Secure" 
-        description="Turn JPG, PNG, and WebP images into high-quality PDF documents in seconds. Fully private, local processing ensures your images never leave your computer."
+        title={tool.seoTitle || tool.name} 
+        description={tool.seoDescription || tool.description}
         keywords="image to pdf, convert jpg to pdf, png to pdf, free online pdf converter, docbit"
       />
 
