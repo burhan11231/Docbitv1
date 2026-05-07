@@ -2,10 +2,16 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { FileQuestion, Home, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { SEO } from './SEO';
 
 export default function NotFound() {
   return (
     <div className="min-h-[80vh] flex flex-col items-center justify-center p-4">
+      <SEO 
+        title="404 - Page Not Found"
+        description="The page you are looking for does not exist on DocBit."
+        noindex={true}
+      />
       <motion.div 
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}

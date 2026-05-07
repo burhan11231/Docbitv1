@@ -23,6 +23,12 @@ import { SEO } from '../SEO';
 import { ToolInfo } from '../ToolInfo';
 import { ShieldCheck, Zap, Globe } from 'lucide-react';
 import { TOOLS } from '../../constants/tools';
+import { SEO_CONFIG, APP_DOMAIN } from '../../seo/seoConfig';
+import { 
+  getWebApplicationSchema, 
+  getBreadcrumbSchema, 
+  getFAQSchema 
+} from '../../seo/structuredData';
 
 // Configure pdfjs worker
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -166,9 +172,19 @@ export default function SplitTool() {
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 pb-40 px-4">
       <SEO 
-        title={tool.seoTitle || tool.name} 
-        description={tool.seoDescription || tool.description}
-        keywords="split pdf, extract pdf pages, free pdf splitter, divide pdf online, docbit"
+        {...SEO_CONFIG.split}
+        schema={[
+          getWebApplicationSchema(
+            SEO_CONFIG.split.title,
+            SEO_CONFIG.split.description,
+            SEO_CONFIG.split.canonical
+          ),
+          getBreadcrumbSchema([
+            { name: 'Home', item: APP_DOMAIN },
+            { name: 'Split PDF', item: SEO_CONFIG.split.canonical }
+          ]),
+          getFAQSchema(tool.faqs || [])
+        ]}
       />
 
        {result ? (
@@ -194,11 +210,12 @@ export default function SplitTool() {
               { title: "Range Support", desc: "Extract specific pages like '1, 3, 5-10' with our intelligent parser.", icon: <Zap className="w-8 h-8" /> },
               { title: "No Subscription", desc: "Get full access to all splitting features without any account or fees.", icon: <Globe className="w-8 h-8" /> }
             ]}
-            faqs={[
-              { q: "Can I split a single page into two?", a: "No, splitting refers to separating high-level pages. We don't cut individual page content." },
-              { q: "How many pages can I extract?", a: "There's no hard limit, but very large PDFs (1000+ pages) may slow down your browser." },
-              { q: "Is the ZIP file safe?", a: "Yes. The ZIP is generated on your computer using JSZip. It contains only your processed PDFs." }
-            ]}
+            faqs={tool.faqs || []}
+            relatedTools={TOOLS.filter(t => t.id !== 'split')}
+            seoContent={{
+              title: 'Split PDF pages into separate files instantly',
+              content: 'Need to extract a single page or divide a large PDF? DocBit offers the fastest way to split PDF online while keeping your data 100% private. Our tool runs entirely in your browser, meaning your sensitive documents never leave your computer. Perfect for separating chapters, extracting receipts, or breaking down large reports into manageable sections.'
+            }}
           />
         </>
        ) : (

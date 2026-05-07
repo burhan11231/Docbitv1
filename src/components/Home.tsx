@@ -21,6 +21,12 @@ import { Link } from 'react-router-dom';
 import { TOOLS } from '../constants/tools';
 import { cn } from '../lib/utils';
 import { SEO } from './SEO';
+import { SEO_CONFIG } from '../seo/seoConfig';
+import { 
+  getSoftwareAppSchema, 
+  getBreadcrumbSchema 
+} from '../seo/structuredData';
+import { APP_DOMAIN } from '../seo/seoConfig';
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -87,9 +93,13 @@ export function Home() {
   return (
     <div className="overflow-x-hidden">
       <SEO 
-        title="DocBit | Fast, Private & Free Online PDF Tools" 
-        description="Best free online PDF tools. Merge, Split, Convert Images to PDF, and PDF to Images instantly in your browser. Fully private, on-device processing."
-        keywords="pdf tools, image to pdf, merge pdf, split pdf, pdf to image, secure pdf converter"
+        {...SEO_CONFIG.home}
+        schema={[
+          getSoftwareAppSchema(SEO_CONFIG.home.description),
+          getBreadcrumbSchema([
+            { name: 'Home', item: APP_DOMAIN }
+          ])
+        ]}
       />
       {/* ⬛ TOP HEAD (PC ONLY) */}
       <div className="hidden lg:flex items-center justify-between px-10 py-3 bg-[#2A3B3B] relative z-50 rounded-xl">
@@ -192,14 +202,14 @@ export function Home() {
           >
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link 
-                to="/tool/img-to-pdf"
+                to="/tools/image-to-pdf"
                 className="px-8 py-5 bg-neutral-900 dark:bg-blue-600 hover:bg-black dark:hover:bg-blue-700 text-white font-black rounded-2xl shadow-xl shadow-black/10 active:scale-95 transition-all text-sm tracking-widest uppercase flex items-center gap-2 group"
               >
                 Start with Image to PDF
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Link>
               <Link 
-                to="/tool/merge"
+                to="/tools/merge-pdf"
                 className="px-8 py-5 bg-white/40 dark:bg-neutral-800 border border-white/40 dark:border-neutral-700 text-neutral-900 dark:text-white font-black rounded-2xl hover:bg-white/60 dark:hover:bg-neutral-700 active:scale-95 transition-all text-sm tracking-widest uppercase"
               >
                 Merge PDF
@@ -222,62 +232,31 @@ export function Home() {
           </motion.div>
         </section>
 
-       
 
-        {/* 🟩 TOOL SECTION */}
-        <section id="tools" className="space-y-12">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-neutral-100 dark:border-neutral-900 pb-8">
-            <div className="space-y-2">
-              <h2 className="text-4xl font-black tracking-tighter text-neutral-900 dark:text-white uppercase italic">Choose a Tool</h2>
-              <p className="text-neutral-500 dark:text-neutral-400 font-medium">Convert, merge, split, and extract PDFs — all in one place, processed locally.</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-3 h-3 bg-green-500 rounded-full animate-ping opacity-50" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400">READY TO PROCESS LOCALLY</span>
-            </div>
-          </div>
 
-          <motion.div 
-            variants={containerVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
-          >
-            {TOOLS.map((tool) => (
-              <motion.div 
-                key={tool.id}
-                variants={itemVariants}
-                whileHover={{ scale: 1.02 }}
-                className="group cursor-pointer"
-              >
-                <Link 
-                  to={tool.href}
-                  className="block h-full p-8 rounded-[32px] bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-blue-500 dark:hover:border-blue-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/10"
-                >
-                  <div className="flex flex-col h-full justify-between gap-10">
-                    <div className="w-16 h-16 rounded-2xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-400 dark:text-neutral-500 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-inner">
-                      {tool.icon}
-                    </div>
-                    <div className="space-y-3">
-                      <h4 className="text-xl font-black tracking-tighter text-neutral-900 dark:text-white uppercase italic">{tool.name}</h4>
-                      <p className="text-xs text-neutral-500 dark:text-neutral-400 font-bold leading-relaxed uppercase tracking-tight">
-                        {tool.description}
-                      </p>
-                    </div>
-                  </div>
-                </Link>
-              </motion.div>
-            ))}
-          </motion.div>
+
+
+
+        {/* 🟪 VISUAL MESSAGE */}
+        <section className="py-12 border-y border-neutral-100 dark:border-neutral-900">
+           <p className="text-center text-4xl md:text-6xl font-black text-neutral-200 dark:text-neutral-800 uppercase italic tracking-tighter leading-none select-none">
+             Your device does the work — <span className="text-blue-600/20 dark:text-blue-500/10">not a remote server.</span>
+           </p>
         </section>
 
-        {/* 🟨 HOW IT WORKS */}
+        {/* 🟫 SEO CONTENT */}
+        <section className="max-w-4xl mx-auto text-center space-y-8">
+           <h2 className="text-2xl font-black uppercase italic tracking-tight text-neutral-400">All-in-One PDF Tools Online</h2>
+           <p className="text-sm text-neutral-500 dark:text-neutral-400 font-medium leading-[2] tracking-wide">
+             DocBit provides essential PDF tools in one place, including image to PDF conversion, PDF merging, splitting, and PDF to image extraction. Everything runs locally in your browser, offering fast performance and complete control over your files without relying on external servers.
+           </p>
+        </section>
+
+
+
+
+{/* 🟨 HOW IT WORKS */}
         <section className="space-y-20 py-12">
-          <div className="text-center space-y-4">
-            <h2 className="text-4xl font-black tracking-tighter text-neutral-900 dark:text-white uppercase italic">Simple and Direct</h2>
-            <p className="text-neutral-500 dark:text-neutral-400">The complexity happens under the hood. For you, it's 1-2-3.</p>
-          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 lg:gap-24">
             {[
@@ -299,6 +278,48 @@ export function Home() {
             ))}
           </div>
         </section>
+
+
+
+
+
+
+                    {/* 🟨 COMPARISON */}
+        <section className="space-y-12">
+          <h2 className="text-center text-4xl font-black tracking-tighter uppercase italic text-neutral-900 dark:text-white">A Better Way to Handle PDFs</h2>
+          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[40px] overflow-hidden shadow-2xl shadow-black/5">
+            <div className="grid grid-cols-2">
+              <div className="p-10 border-r border-neutral-100 dark:border-neutral-800 space-y-8 bg-blue-50/50 dark:bg-blue-900/5">
+                <h3 className="text-3xl font-black text-blue-600 uppercase tracking-tighter italic">DocBit</h3>
+                <ul className="space-y-6">
+                  {['Free & Advanced', 'Local processing', 'Immediate results'].map((item, i) => (
+                    <li key={i} className="flex items-center gap-3 text-sm font-black uppercase text-neutral-900 dark:text-neutral-300">
+                      <div className="w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center">
+                        <ArrowRight className="w-2.5 h-2.5 text-white" />
+                      </div>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="p-10 space-y-8">
+                <h3 className="text-3xl font-black text-neutral-400 uppercase tracking-tighter italic">Legacy</h3>
+                <ul className="space-y-6">
+                  {['Paid features', 'Server-based', 'Slower workflow'].map((item, i) => (
+                    <li key={i} className="flex items-center gap-3 text-sm font-black uppercase text-neutral-400">
+                      <div className="w-4 h-4 border-2 border-neutral-200 dark:border-neutral-800 rounded-full" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </section>
+
+       
+
+       
 
         {/* 🟥 WHY DOCBIT & TRUST SECTION */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -346,24 +367,12 @@ export function Home() {
            </section>
         </div>
 
-        {/* 🟪 VISUAL MESSAGE */}
-        <section className="py-12 border-y border-neutral-100 dark:border-neutral-900">
-           <p className="text-center text-4xl md:text-6xl font-black text-neutral-200 dark:text-neutral-800 uppercase italic tracking-tighter leading-none select-none">
-             Your device does the work — <span className="text-blue-600/20 dark:text-blue-500/10">not a remote server.</span>
-           </p>
-        </section>
 
-        {/* 🟫 SEO CONTENT */}
-        <section className="max-w-4xl mx-auto text-center space-y-8">
-           <h2 className="text-2xl font-black uppercase italic tracking-tight text-neutral-400">All-in-One PDF Tools Online</h2>
-           <p className="text-sm text-neutral-500 dark:text-neutral-400 font-medium leading-[2] tracking-wide">
-             DocBit provides essential PDF tools in one place, including image to PDF conversion, PDF merging, splitting, and PDF to image extraction. Everything runs locally in your browser, offering fast performance and complete control over your files without relying on external servers.
-           </p>
-        </section>
 
-        {/* 🟦 USE CASES */}
+
+         {/* 🟦 USE CASES */}
         <section className="space-y-16">
-          <h2 className="text-center text-4xl font-black tracking-tighter uppercase italic text-neutral-900 dark:text-white">Made for Everyday Tasks</h2>
+          <h2 className="text-4xl font-black tracking-tighter uppercase italic text-neutral-900 dark:text-white mt-4">Made for Everyday Tasks</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {[
               { icon: <GraduationCap className="w-6 h-6" />, title: "Students", desc: "Preparing assignments" },
@@ -384,61 +393,60 @@ export function Home() {
           </div>
         </section>
 
-        {/* 🟨 COMPARISON */}
-        <section className="space-y-12">
-          <h2 className="text-center text-4xl font-black tracking-tighter uppercase italic text-neutral-900 dark:text-white">A Better Way to Handle PDFs</h2>
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[40px] overflow-hidden shadow-2xl shadow-black/5">
-            <div className="grid grid-cols-2">
-              <div className="p-10 border-r border-neutral-100 dark:border-neutral-800 space-y-8 bg-blue-50/50 dark:bg-blue-900/5">
-                <h3 className="text-3xl font-black text-blue-600 uppercase tracking-tighter italic">DocBit</h3>
-                <ul className="space-y-6">
-                  {['Free & Advanced', 'Local processing', 'Immediate results'].map((item, i) => (
-                    <li key={i} className="flex items-center gap-3 text-sm font-black uppercase text-neutral-900 dark:text-neutral-300">
-                      <div className="w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center">
-                        <ArrowRight className="w-2.5 h-2.5 text-white" />
-                      </div>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="p-10 space-y-8">
-                <h3 className="text-3xl font-black text-neutral-400 uppercase tracking-tighter italic">Legacy</h3>
-                <ul className="space-y-6">
-                  {['Paid features', 'Server-based', 'Slower workflow'].map((item, i) => (
-                    <li key={i} className="flex items-center gap-3 text-sm font-black uppercase text-neutral-400">
-                      <div className="w-4 h-4 border-2 border-neutral-200 dark:border-neutral-800 rounded-full" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
+
+        
+       
+     
+
+
+
+         {/* 🟩 TOOL SECTION */}
+        <section id="tools" className="space-y-12">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-neutral-100 dark:border-neutral-900 pb-8">
+  <div className="space-y-2">
+    <h2 className="text-4xl font-black tracking-tighter text-neutral-900 dark:text-white uppercase italic">
+      Choose a Tool
+    </h2>
+    <p className="text-neutral-500 dark:text-neutral-400 font-medium">
+      Convert, merge, split, and extract PDFs — all in one place, processed locally.
+    </p>
+  </div>
+</div>
+          <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+          >
+            {TOOLS.map((tool) => (
+              <motion.div 
+                key={tool.id}
+                variants={itemVariants}
+                whileHover={{ scale: 1.02 }}
+                className="group cursor-pointer"
+              >
+                <Link 
+                  to={tool.href}
+                  className="block h-full p-8 rounded-[32px] bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-blue-500 dark:hover:border-blue-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/10"
+                >
+                  <div className="flex flex-col h-full justify-between gap-10">
+                    <div className="w-16 h-16 rounded-2xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-400 dark:text-neutral-500 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-inner">
+                      {tool.icon}
+                    </div>
+                    <div className="space-y-3">
+                      <h4 className="text-xl font-black tracking-tighter text-neutral-900 dark:text-white uppercase italic">{tool.name}</h4>
+                      <p className="text-xs text-neutral-500 dark:text-neutral-400 font-bold leading-relaxed uppercase tracking-tight">
+                        {tool.description}
+                      </p>
+                    </div>
+                  </div>
+                </Link>
+              </motion.div>
+            ))}
+          </motion.div>
         </section>
 
-        {/* 🟥 FINAL CTA */}
-        <section className="relative p-12 md:p-24 rounded-[64px] bg-blue-600 text-center space-y-10 overflow-hidden isolate shadow-2xl shadow-blue-500/20 px-6">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.1),transparent)]" />
-          <div className="space-y-4 relative">
-             <h2 className="text-4xl md:text-6xl font-black tracking-tighter uppercase italic text-white leading-tight">
-               Start working with <br className="hidden md:block" />
-               your files.
-             </h2>
-            
-          </div>
-          <div className="relative">
-            <Link 
-              to="/tool/img-to-pdf"
-              className="inline-block px-12 py-6 bg-white text-blue-600 font-black rounded-2xl shadow-2xl shadow-black/10 hover:scale-105 active:scale-95 transition-all text-sm tracking-widest uppercase italic"
-            >
-              Try Image to PDF
-            </Link>
-          </div>
-          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-200 relative">
-           Create your PDF now
-          </p>
-        </section>
 
         
       </div>

@@ -27,6 +27,12 @@ import { SEO } from '../SEO';
 import { ToolInfo } from '../ToolInfo';
 import { ShieldCheck, Zap, Globe } from 'lucide-react';
 import { TOOLS } from '../../constants/tools';
+import { SEO_CONFIG, APP_DOMAIN } from '../../seo/seoConfig';
+import { 
+  getWebApplicationSchema, 
+  getBreadcrumbSchema, 
+  getFAQSchema 
+} from '../../seo/structuredData';
 
 // Configure pdfjs worker
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -193,9 +199,19 @@ export default function PdfToImgTool() {
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 pb-40">
       <SEO 
-        title={tool.seoTitle || tool.name} 
-        description={tool.seoDescription || tool.description}
-        keywords="pdf to image, convert pdf to jpg, extract images from pdf, pdf to png, docbit"
+        {...SEO_CONFIG.pdfToImg}
+        schema={[
+          getWebApplicationSchema(
+            SEO_CONFIG.pdfToImg.title,
+            SEO_CONFIG.pdfToImg.description,
+            SEO_CONFIG.pdfToImg.canonical
+          ),
+          getBreadcrumbSchema([
+            { name: 'Home', item: APP_DOMAIN },
+            { name: 'PDF to Image', item: SEO_CONFIG.pdfToImg.canonical }
+          ]),
+          getFAQSchema(tool.faqs || [])
+        ]}
       />
 
        {result ? (
@@ -221,11 +237,12 @@ export default function PdfToImgTool() {
               { title: "High Resolution", desc: "We render PDF pages at 2x scale for sharp, professional-grade image quality.", icon: <Zap className="w-8 h-8" /> },
               { title: "Select & Save", desc: "Choose only the specific pages you need instead of converting the entire document.", icon: <Globe className="w-8 h-8" /> }
             ]}
-            faqs={[
-              { q: "What image formats are supported?", a: "Currently, we support high-quality JPG (best for photos) and PNG (best for graphics/text)." },
-              { q: "Is there a limit on file size?", a: "Up to 300MB, depending on your device's RAM, as all processing is local." },
-              { q: "Will the images have watermarks?", a: "No. Your output is clean, high-resolution, and 100% watermark-free - always." }
-            ]}
+            faqs={tool.faqs || []}
+            relatedTools={TOOLS.filter(t => t.id !== 'pdf-to-img')}
+            seoContent={{
+              title: 'Convert PDF to JPG or PNG images on high resolution',
+              content: 'Transform your PDF pages into stunning images with DocBit. Our PDF to image converter supports high-resolution exports in both JPG and PNG formats, processed entirely within your browser for absolute privacy. Whether you need an image of a single page or the entire document, our tool delivers professional results without any software downloads or account registrations.'
+            }}
           />
         </>
       ) : (

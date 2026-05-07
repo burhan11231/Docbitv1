@@ -67,10 +67,10 @@ export default function App() {
           }>
             <Routes>
               <Route path="/" element={<Home />} />
-              <Route path="/tool/merge" element={<MergeTool />} />
-              <Route path="/tool/split" element={<SplitTool />} />
-              <Route path="/tool/pdf-to-img" element={<PdfToImgTool />} />
-              <Route path="/tool/img-to-pdf" element={<ImgToPdfTool />} />
+              <Route path="/tools/merge-pdf" element={<MergeTool />} />
+              <Route path="/tools/split-pdf" element={<SplitTool />} />
+              <Route path="/tools/pdf-to-images" element={<PdfToImgTool />} />
+              <Route path="/tools/image-to-pdf" element={<ImgToPdfTool />} />
               <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/about" element={<About />} />

@@ -6,19 +6,46 @@ import {
   Settings2, 
   Zap, 
   ShieldCheck, 
-  Globe 
+  Globe,
+  ArrowRight
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { PDFTool } from '../constants/tools';
 
 interface ToolInfoProps {
   title: string;
   steps: { title: string; desc: string }[];
   benefits: { title: string; desc: string; icon: React.ReactNode }[];
   faqs: { q: string; a: string }[];
+  relatedTools?: PDFTool[];
+  seoContent?: {
+    title: string;
+    content: string;
+  };
 }
 
-export const ToolInfo: React.FC<ToolInfoProps> = ({ title, steps, benefits, faqs }) => {
+export const ToolInfo: React.FC<ToolInfoProps> = ({ 
+  title, 
+  steps, 
+  benefits, 
+  faqs,
+  relatedTools,
+  seoContent
+}) => {
   return (
     <div className="mt-24 space-y-32">
+      {/* SEO Content Section */}
+      {seoContent && (
+        <section className="max-w-3xl mx-auto space-y-6">
+          <div className="p-8 rounded-[32px] bg-blue-50/50 dark:bg-blue-900/5 border border-blue-100 dark:border-blue-900/20">
+            <h2 className="text-2xl font-black tracking-tight dark:text-white mb-4">{seoContent.title}</h2>
+            <div className="prose prose-neutral dark:prose-invert max-w-none text-neutral-500 font-medium leading-relaxed">
+              {seoContent.content}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* How It Works */}
       <section className="space-y-12">
         <div className="text-center space-y-4">
@@ -101,6 +128,37 @@ export const ToolInfo: React.FC<ToolInfoProps> = ({ title, steps, benefits, faqs
           ))}
         </div>
       </section>
+
+      {/* Related Tools */}
+      {relatedTools && relatedTools.length > 0 && (
+        <section className="space-y-12">
+          <div className="text-center space-y-4">
+            <h2 className="text-3xl font-black tracking-tight dark:text-white">Explore more tools</h2>
+            <p className="text-neutral-500 font-medium">Continue your PDF workflow with our other free utilities.</p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {relatedTools.map((tool) => (
+              <Link 
+                key={tool.id}
+                to={tool.href}
+                className="group p-6 rounded-[32px] bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 shadow-sm hover:border-blue-500 transition-all text-left space-y-4"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-neutral-50 dark:bg-neutral-800 group-hover:bg-blue-600 group-hover:text-white flex items-center justify-center transition-colors">
+                  {tool.icon}
+                </div>
+                <div>
+                  <h3 className="font-black dark:text-white flex items-center gap-2">
+                    {tool.name}
+                    <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+                  </h3>
+                  <p className="text-sm text-neutral-500 font-medium line-clamp-1">{tool.description}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 };

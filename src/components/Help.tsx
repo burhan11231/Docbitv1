@@ -2,6 +2,8 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { HelpCircle, ShieldCheck, Zap, Globe, FileQuestion, BookOpen, Layers } from 'lucide-react';
 import { SEO } from './SEO';
+import { SEO_CONFIG, APP_DOMAIN } from '../seo/seoConfig';
+import { getBreadcrumbSchema, getFAQSchema } from '../seo/structuredData';
 
 export default function Help() {
   const categories = [
@@ -34,11 +36,19 @@ export default function Help() {
     }
   ];
 
+  const allFaqs = categories.flatMap(cat => cat.faqs);
+
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-black py-20 px-4">
       <SEO 
-        title="Help Center & FAQ - Everything You Need to Know" 
-        description="Find answers to common questions about DocBit, privacy, file limits, and how our local processing technology works."
+        {...SEO_CONFIG.help} 
+        schema={[
+          getBreadcrumbSchema([
+            { name: 'Home', item: APP_DOMAIN },
+            { name: 'Help', item: SEO_CONFIG.help.canonical }
+          ]),
+          getFAQSchema(allFaqs)
+        ]}
       />
 
       <div className="max-w-4xl mx-auto space-y-20">

@@ -2,13 +2,18 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { ShieldCheck, Zap, Globe, Heart, Files, EyeOff } from 'lucide-react';
 import { SEO } from './SEO';
+import { SEO_CONFIG, APP_DOMAIN } from '../seo/seoConfig';
+import { getBreadcrumbSchema } from '../seo/structuredData';
 
 export default function About() {
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-black py-20 px-4">
       <SEO 
-        title="Our Mission - The Privacy-First PDF Suite" 
-        description="Learn why DocBit was built: to provide high-performance PDF tools that respect your privacy by processing everything locally."
+        {...SEO_CONFIG.about} 
+        schema={getBreadcrumbSchema([
+          { name: 'Home', item: APP_DOMAIN },
+          { name: 'About', item: SEO_CONFIG.about.canonical }
+        ])}
       />
       
       <div className="max-w-4xl mx-auto space-y-24">

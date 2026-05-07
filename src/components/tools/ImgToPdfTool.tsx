@@ -31,6 +31,12 @@ import { ColorPickerModal } from '../ColorPickerModal';
 import { SEO } from '../SEO';
 import { ToolInfo } from '../ToolInfo';
 import { TOOLS } from '../../constants/tools';
+import { SEO_CONFIG, APP_DOMAIN } from '../../seo/seoConfig';
+import { 
+  getWebApplicationSchema, 
+  getBreadcrumbSchema, 
+  getFAQSchema 
+} from '../../seo/structuredData';
 
 type FitMode = 'fit' | 'fill' | 'stretch';
 type PageSize = 'A4' | 'A3' | 'Letter' | 'Custom';
@@ -260,9 +266,19 @@ export default function ImgToPdfTool() {
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 pb-40">
       <SEO 
-        title={tool.seoTitle || tool.name} 
-        description={tool.seoDescription || tool.description}
-        keywords="image to pdf, convert jpg to pdf, png to pdf, free online pdf converter, docbit"
+        {...SEO_CONFIG.imgToPdf}
+        schema={[
+          getWebApplicationSchema(
+            SEO_CONFIG.imgToPdf.title,
+            SEO_CONFIG.imgToPdf.description,
+            SEO_CONFIG.imgToPdf.canonical
+          ),
+          getBreadcrumbSchema([
+            { name: 'Home', item: APP_DOMAIN },
+            { name: 'Image to PDF', item: SEO_CONFIG.imgToPdf.canonical }
+          ]),
+          getFAQSchema(tool.faqs || [])
+        ]}
       />
 
        {result ? (
@@ -294,11 +310,12 @@ export default function ImgToPdfTool() {
               { title: "Pro Customization", desc: "Full control over borders, background colors, and image scaling.", icon: <Settings2 className="w-8 h-8" /> },
               { title: "All Formats", desc: "Support for JPG, JPEG, PNG, and modern WebP image formats.", icon: <ImageIcon className="w-8 h-8" /> }
             ]}
-            faqs={[
-              { q: "Will my images lose quality?", a: "No. We use high-fidelity compression algorithms that maintain crispness while optimized for PDF." },
-              { q: "Can I reorder images?", a: "Yes. Once uploaded, you can use the move buttons to arrange images in your preferred sequence." },
-              { q: "Is there a limit on number of images?", a: "You can convert up to 50 images at once for optimal browser performance." }
-            ]}
+            faqs={tool.faqs || []}
+            relatedTools={TOOLS.filter(t => t.id !== 'img-to-pdf')}
+            seoContent={{
+              title: 'Create professional PDFs from your photos instantly',
+              content: 'Convert up to 50 images into a single, high-quality PDF document for free with DocBit. Our tool is designed for speed and absolute privacy, processing all your images locally in your browser. Whether you\'re a student combining assignment photos or a professional creating a document from scanned receipts, DocBit provides a seamless, mobile-friendly experience with no server uploads required.'
+            }}
           />
         </>
       ) : (

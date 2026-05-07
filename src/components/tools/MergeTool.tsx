@@ -24,6 +24,12 @@ import { DownloadResult } from '../DownloadResult';
 import { SEO } from '../SEO';
 import { ToolInfo } from '../ToolInfo';
 import { TOOLS } from '../../constants/tools';
+import { SEO_CONFIG, APP_DOMAIN } from '../../seo/seoConfig';
+import { 
+  getWebApplicationSchema, 
+  getBreadcrumbSchema, 
+  getFAQSchema 
+} from '../../seo/structuredData';
 
 interface FileData {
   id: string;
@@ -125,9 +131,19 @@ export default function MergeTool() {
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 pb-40">
       <SEO 
-        title={tool.seoTitle || tool.name} 
-        description={tool.seoDescription || tool.description}
-        keywords="merge pdf online, combine pdf files, free pdf tools, join pdf documents"
+        {...SEO_CONFIG.merge}
+        schema={[
+          getWebApplicationSchema(
+            SEO_CONFIG.merge.title,
+            SEO_CONFIG.merge.description,
+            SEO_CONFIG.merge.canonical
+          ),
+          getBreadcrumbSchema([
+            { name: 'Home', item: APP_DOMAIN },
+            { name: 'Merge PDF', item: SEO_CONFIG.merge.canonical }
+          ]),
+          getFAQSchema(tool.faqs || [])
+        ]}
       />
 
       {result ? (
@@ -153,11 +169,12 @@ export default function MergeTool() {
               { title: "Blazing Fast", desc: "Since there is no upload or download delay, merging is almost instantaneous.", icon: <Zap className="w-8 h-8" /> },
               { title: "High Fidelity", desc: "We maintain the original quality of your documents, including fonts and images.", icon: <Globe className="w-8 h-8" /> }
             ]}
-            faqs={[
-              { q: "Is there a limit on file size?", a: "The limit is based on your browser's memory. Generally, we support up to 500MB of combined PDF data." },
-              { q: "Are my files stored anywhere?", a: "No. DocBit uses client-side WASM technology. Your files stay in your browser's memory and are deleted once you close the tab." },
-              { q: "Can I merge protected PDFs?", a: "Currently, you must provide unlocked PDFs. We prioritize security and do not bypass owner passwords." }
-            ]}
+            faqs={tool.faqs || []}
+            relatedTools={TOOLS.filter(t => t.id !== 'merge')}
+            seoContent={{
+              title: 'Combine multiple PDF files into one for free',
+              content: 'DocBit provides a seamless way to merge multiple PDF documents into a single, organized file. Our tool is optimized for professionals and students who need to combine reports, assignments, or presentations quickly. With zero trace-conversion, your documents stay on your device, ensuring maximum security while providing a mobile-friendly interface for combine PDF tasks.'
+            }}
           />
         </>
       ) : (

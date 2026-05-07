@@ -2,13 +2,18 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { Mail, Instagram, MessageSquare } from 'lucide-react';
 import { SEO } from './SEO';
+import { SEO_CONFIG, APP_DOMAIN } from '../seo/seoConfig';
+import { getBreadcrumbSchema } from '../seo/structuredData';
 
 export default function Contact() {
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-black py-20 px-4">
       <SEO 
-        title="Contact Us - Let's Talk Docs" 
-        description="Have questions or feedback? Reach out to the DocBit team at docbit.app@gmail.com or find us on Instagram."
+        {...SEO_CONFIG.contact} 
+        schema={getBreadcrumbSchema([
+          { name: 'Home', item: APP_DOMAIN },
+          { name: 'Contact', item: SEO_CONFIG.contact.canonical }
+        ])}
       />
       
       <div className="max-w-4xl mx-auto space-y-20">
