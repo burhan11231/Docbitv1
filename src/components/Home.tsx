@@ -24,7 +24,8 @@ import { SEO } from './SEO';
 import { SEO_CONFIG } from '../seo/seoConfig';
 import { 
   getSoftwareAppSchema, 
-  getBreadcrumbSchema 
+  getBreadcrumbSchema,
+  getWebSiteSchema
 } from '../seo/structuredData';
 import { APP_DOMAIN } from '../seo/seoConfig';
 
@@ -96,6 +97,7 @@ export function Home() {
         {...SEO_CONFIG.home}
         schema={[
           getSoftwareAppSchema(SEO_CONFIG.home.description),
+          getWebSiteSchema(),
           getBreadcrumbSchema([
             { name: 'Home', item: APP_DOMAIN }
           ])
@@ -215,8 +217,8 @@ export function Home() {
                 Merge PDF
               </Link>
             </div>
-            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-neutral-800/60 dark:text-neutral-400 animate-pulse">
-              No signup required
+            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-neutral-800/60 dark:text-neutral-400">
+              No server uploads
             </p>
           </motion.div>
 
@@ -261,7 +263,7 @@ export function Home() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 lg:gap-24">
             {[
               { icon: <UploadCloud className="w-10 h-10" />, title: "1. Select your files", desc: "Pick documents from your local storage." },
-              { icon: <Zap className="w-10 h-10" />, title: "2. Process locally", desc: "WASM engine works directly in your browser." },
+              { icon: <Zap className="w-10 h-10" />, title: "2. Process locally", desc: "Fast browser engine works directly on your device." },
               { icon: <FileCheck className="w-10 h-10" />, title: "3. Download instantly", desc: "No wait times, no queues, just your file." }
             ].map((step, i) => (
               <div key={i} className="flex flex-col items-center text-center space-y-8 group">

@@ -14,12 +14,17 @@ export default defineConfig(({mode}) => {
         registerType: 'autoUpdate',
         injectRegister: 'auto',
         workbox: {
-          globPatterns: ['**/*.{js,css,html,ico,png,svg}']
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,txt,xml}'],
+
+          navigateFallbackDenylist: [
+            /^\/sitemap\.xml$/,
+            /^\/robots\.txt$/,
+          ],
         },
         manifest: {
           name: 'DocBit - Free PDF Tools',
           short_name: 'DocBit',
-          description: 'Free PDF Tools, On Your Device. Fast, private, and local PDF processing.',
+          description: 'Secure, browser-based PDF tools. Fast, private local file processing with no server uploads.',
           theme_color: '#2563eb',
           background_color: '#ffffff',
           display: 'standalone',

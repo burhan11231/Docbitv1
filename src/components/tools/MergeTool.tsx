@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Dropzone } from '../Dropzone';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { useFileExitConfirm } from '../../hooks/useFileExitConfirm';
+import { NavigationConfirmModal } from '../NavigationConfirmModal';
 import { 
   Trash2, 
   ArrowUp, 
@@ -23,13 +25,15 @@ import { readFileAsArrayBuffer, cn, formatBytes } from '../../lib/utils';
 import { DownloadResult } from '../DownloadResult';
 import { SEO } from '../SEO';
 import { ToolInfo } from '../ToolInfo';
+import { ToolContent } from '../ToolContent';
 import { TOOLS } from '../../constants/tools';
 import { SEO_CONFIG, APP_DOMAIN } from '../../seo/seoConfig';
 import { 
   getWebApplicationSchema, 
-  getBreadcrumbSchema, 
-  getFAQSchema 
+  getBreadcrumbSchema,
+  getHowToSchema
 } from '../../seo/structuredData';
+import { getFAQSchema } from '../../utils/schema/faqSchema';
 
 interface FileData {
   id: string;
@@ -48,6 +52,8 @@ export default function MergeTool() {
   // Options
   const [normalizeSize, setNormalizeSize] = useState(false);
   const [enableCompression, setEnableCompression] = useState(false);
+
+  const blocker = useFileExitConfirm({ isDirty: files.length > 0 && !result });
 
   const handleFiles = async (newFiles: File[]) => {
     setIsAddingFiles(true);
@@ -142,8 +148,9 @@ export default function MergeTool() {
             { name: 'Home', item: APP_DOMAIN },
             { name: 'Merge PDF', item: SEO_CONFIG.merge.canonical }
           ]),
-          getFAQSchema(tool.faqs || [])
-        ]}
+          getFAQSchema(tool.faqs || []),
+          tool.steps && getHowToSchema(tool.name, tool.description, tool.steps)
+        ].filter(Boolean)}
       />
 
       {result ? (
@@ -165,15 +172,15 @@ export default function MergeTool() {
               { title: "Merge & Download", desc: "Click Merge to combine them into a single high-quality PDF document instantly." }
             ]}
             benefits={[
-              { title: "100% Private", desc: "Your files are processed locally in your browser. Nothing is uploaded to any server.", icon: <ShieldCheck className="w-8 h-8" /> },
-              { title: "Blazing Fast", desc: "Since there is no upload or download delay, merging is almost instantaneous.", icon: <Zap className="w-8 h-8" /> },
-              { title: "High Fidelity", desc: "We maintain the original quality of your documents, including fonts and images.", icon: <Globe className="w-8 h-8" /> }
+              { title: "Privacy First", desc: "Files are merged directly in your browser. Nothing is uploaded to our servers, ensuring your data stays private.", icon: <ShieldCheck className="w-8 h-8" /> },
+              { title: "No Connection Wait", desc: "Bypass slow upload/download speeds. Local processing means instant results on any device.", icon: <Zap className="w-8 h-8" /> },
+              { title: "Secure Workflow", desc: "Industry-grade browser logic handles your documents without leaving a digital footprint on the cloud.", icon: <Globe className="w-8 h-8" /> }
             ]}
             faqs={tool.faqs || []}
             relatedTools={TOOLS.filter(t => t.id !== 'merge')}
             seoContent={{
-              title: 'Combine multiple PDF files into one for free',
-              content: 'DocBit provides a seamless way to merge multiple PDF documents into a single, organized file. Our tool is optimized for professionals and students who need to combine reports, assignments, or presentations quickly. With zero trace-conversion, your documents stay on your device, ensuring maximum security while providing a mobile-friendly interface for combine PDF tasks.'
+              title: 'Securely combine multiple PDF files in your browser',
+              content: 'DocBit provides a seamless way to merge multiple PDF documents into a single, organized file. Our tool is optimized for professionals and students who need to combine reports, assignments, or presentations quickly without cloud uploads. With local-first processing, your documents stay on your device, ensuring maximum security and zero-server footprint.'
             }}
           />
         </>
@@ -328,6 +335,17 @@ export default function MergeTool() {
            </div>
         </div>
       )}
+      <ToolContent 
+        toolName="Merge PDF"
+        toolType="Merge"
+        description="Securely combine multiple PDF documents into a single file directly in your browser. No uploads, maximum privacy."
+      />
+
+      <NavigationConfirmModal 
+        isOpen={blocker.state === 'blocked'}
+        onConfirm={() => blocker.proceed?.()}
+        onCancel={() => blocker.reset?.()}
+      />
     </div>
   );
 }

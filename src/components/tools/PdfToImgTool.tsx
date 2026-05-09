@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Dropzone } from '../Dropzone';
 import { PDFDocument } from 'pdf-lib';
 import * as pdfjs from 'pdfjs-dist';
+import { useFileExitConfirm } from '../../hooks/useFileExitConfirm';
+import { NavigationConfirmModal } from '../NavigationConfirmModal';
 import { 
   Download, 
   Loader2, 
@@ -25,14 +27,16 @@ import { ImageViewer } from '../ImageViewer';
 import { DownloadResult } from '../DownloadResult';
 import { SEO } from '../SEO';
 import { ToolInfo } from '../ToolInfo';
+import { ToolContent } from '../ToolContent';
 import { ShieldCheck, Zap, Globe } from 'lucide-react';
 import { TOOLS } from '../../constants/tools';
 import { SEO_CONFIG, APP_DOMAIN } from '../../seo/seoConfig';
 import { 
   getWebApplicationSchema, 
-  getBreadcrumbSchema, 
-  getFAQSchema 
+  getBreadcrumbSchema,
+  getHowToSchema
 } from '../../seo/structuredData';
+import { getFAQSchema } from '../../utils/schema/faqSchema';
 
 // Configure pdfjs worker
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -60,6 +64,8 @@ export default function PdfToImgTool() {
   const [previewImg, setPreviewImg] = useState<string | null>(null);
   const [highResPreview, setHighResPreview] = useState<string | null>(null);
   const [isRenderingPreview, setIsRenderingPreview] = useState(false);
+
+  const blocker = useFileExitConfirm({ isDirty: !!file && !result });
 
   const handleFiles = async (files: File[]) => {
     if (files.length === 0) return;
@@ -210,8 +216,9 @@ export default function PdfToImgTool() {
             { name: 'Home', item: APP_DOMAIN },
             { name: 'PDF to Image', item: SEO_CONFIG.pdfToImg.canonical }
           ]),
-          getFAQSchema(tool.faqs || [])
-        ]}
+          getFAQSchema(tool.faqs || []),
+          tool.steps && getHowToSchema(tool.name, tool.description, tool.steps)
+        ].filter(Boolean)}
       />
 
        {result ? (
@@ -233,15 +240,15 @@ export default function PdfToImgTool() {
               { title: "Download Images", desc: "Retrieve your high-resolution images instantly in a neatly organized ZIP file." }
             ]}
             benefits={[
-              { title: "Browser-Only", desc: "Your PDF never touches a server. All image rendering happens locally inside your browser.", icon: <ShieldCheck className="w-8 h-8" /> },
-              { title: "High Resolution", desc: "We render PDF pages at 2x scale for sharp, professional-grade image quality.", icon: <Zap className="w-8 h-8" /> },
-              { title: "Select & Save", desc: "Choose only the specific pages you need instead of converting the entire document.", icon: <Globe className="w-8 h-8" /> }
+              { title: "Browser-Only Data", desc: "Your PDF never touches a server. All image rendering happens locally inside your browser sessions.", icon: <ShieldCheck className="w-8 h-8" /> },
+              { title: "High Resolution", desc: "We render PDF pages at 2x scale for sharp, professional-grade image quality without cloud lag.", icon: <Zap className="w-8 h-8" /> },
+              { title: "Privacy First", desc: "Extract specific pages or entire files securely. No data footprint is left on our infrastructure.", icon: <Globe className="w-8 h-8" /> }
             ]}
             faqs={tool.faqs || []}
             relatedTools={TOOLS.filter(t => t.id !== 'pdf-to-img')}
             seoContent={{
-              title: 'Convert PDF to JPG or PNG images on high resolution',
-              content: 'Transform your PDF pages into stunning images with DocBit. Our PDF to image converter supports high-resolution exports in both JPG and PNG formats, processed entirely within your browser for absolute privacy. Whether you need an image of a single page or the entire document, our tool delivers professional results without any software downloads or account registrations.'
+              title: 'Securely convert PDF to JPG or PNG with local processing',
+              content: 'Transform your PDF pages into stunning images securely with DocBit. Our PDF to image converter supports high-resolution exports in both JPG and PNG formats, processed entirely within your browser for absolute privacy. Whether you need an image of a single page or the entire document, our tool delivers professional results without server uploads or account registrations.'
             }}
           />
         </>
@@ -387,6 +394,17 @@ export default function PdfToImgTool() {
            </div>
         </div>
       )}
+      <ToolContent 
+        toolName="PDF to Image"
+        toolType="Convert"
+        description="Convert PDF pages into high-quality JPG or PNG images instantly. Our local engine ensures crystal-clear resolution without uploading your data."
+      />
+
+      <NavigationConfirmModal 
+        isOpen={blocker.state === 'blocked'}
+        onConfirm={() => blocker.proceed?.()}
+        onCancel={() => blocker.reset?.()}
+      />
     </div>
   );
 }

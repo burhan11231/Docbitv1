@@ -1,6 +1,7 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import { SITE_NAME, APP_DOMAIN, THEME_COLOR } from '../seo/seoConfig';
+import { StructuredData } from './StructuredData';
 
 interface SEOProps {
   title: string;
@@ -27,9 +28,8 @@ export const SEO: React.FC<SEOProps> = ({
   const finalCanonical = canonical || APP_DOMAIN;
   const finalOgImage = ogImage || 'https://res.cloudinary.com/dlesei0kn/image/upload/v1778091011/og_docbit_cebbib.jpg';
 
-  const schemas = Array.isArray(schema) ? schema : schema ? [schema] : [];
-
   return (
+    <>
     <Helmet>
       {/* Indexing */}
       {noindex && <meta name="robots" content="noindex, nofollow" />}
@@ -64,18 +64,13 @@ export const SEO: React.FC<SEOProps> = ({
       <meta name="twitter:image" content={finalOgImage} />
       <meta name="twitter:site" content="@DocBit_In" />
 
-      {/* Structured Data */}
-      {schemas.map((s, i) => (
-        <script key={i} type="application/ld+json">
-          {JSON.stringify(s)}
-        </script>
-      ))}
-
       {/* Trust Signals & Mobile Optimization */}
       <meta name="mobile-web-app-capable" content="yes" />
       <meta name="apple-mobile-web-app-capable" content="yes" />
       <meta name="apple-mobile-web-app-status-bar-style" content="default" />
       <meta name="apple-mobile-web-app-title" content={SITE_NAME} />
     </Helmet>
-  );
+    <StructuredData data={schema} />
+  </>
+);
 };

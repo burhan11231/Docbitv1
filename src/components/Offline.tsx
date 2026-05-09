@@ -72,8 +72,8 @@ export default function Offline() {
             </div>
             
             <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-black uppercase tracking-widest text-white/90">Browsing Offline</p>
-              <p className="text-[10px] font-bold text-neutral-400 truncate">DocBit works without internet.</p>
+              <p className="text-[11px] font-black uppercase tracking-widest text-white/90">No Connection</p>
+              <p className="text-[10px] font-bold text-neutral-400 truncate">Local processing tools remain active.</p>
             </div>
 
             <div className="flex items-center gap-1">

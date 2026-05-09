@@ -57,9 +57,9 @@ export function Header({ activeToolName, onMenuClick, onReset }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-2">
-        <div className="hidden lg:flex items-center gap-1 px-3 py-1.5 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-full text-xs font-medium border border-green-100 dark:border-green-900/30">
+        <div className="hidden lg:flex items-center gap-1 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-xs font-medium border border-blue-100 dark:border-blue-900/30">
           <ShieldCheck className="w-3.5 h-3.5" />
-          Offline Processing
+          Local Processing
         </div>
 
         {onReset && (

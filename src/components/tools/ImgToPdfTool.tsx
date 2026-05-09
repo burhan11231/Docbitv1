@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Dropzone } from '../Dropzone';
 import { PDFDocument, PageSizes, rgb, StandardFonts } from 'pdf-lib';
+import { useFileExitConfirm } from '../../hooks/useFileExitConfirm';
+import { NavigationConfirmModal } from '../NavigationConfirmModal';
 import { 
   FileImage, 
   Download, 
@@ -30,13 +32,15 @@ import { ImageViewer } from '../ImageViewer';
 import { ColorPickerModal } from '../ColorPickerModal';
 import { SEO } from '../SEO';
 import { ToolInfo } from '../ToolInfo';
+import { ToolContent } from '../ToolContent';
 import { TOOLS } from '../../constants/tools';
 import { SEO_CONFIG, APP_DOMAIN } from '../../seo/seoConfig';
 import { 
   getWebApplicationSchema, 
-  getBreadcrumbSchema, 
-  getFAQSchema 
+  getBreadcrumbSchema,
+  getHowToSchema
 } from '../../seo/structuredData';
+import { getFAQSchema } from '../../utils/schema/faqSchema';
 
 type FitMode = 'fit' | 'fill' | 'stretch';
 type PageSize = 'A4' | 'A3' | 'Letter' | 'Custom';
@@ -72,6 +76,8 @@ export default function ImgToPdfTool() {
 
   const [result, setResult] = useState<{ url: string; size: number } | null>(null);
   const [previewItem, setPreviewItem] = useState<ImgData | null>(null);
+
+  const blocker = useFileExitConfirm({ isDirty: images.length > 0 && !result });
 
   const handleFiles = async (files: File[]) => {
     setIsAddingFiles(true);
@@ -277,8 +283,9 @@ export default function ImgToPdfTool() {
             { name: 'Home', item: APP_DOMAIN },
             { name: 'Image to PDF', item: SEO_CONFIG.imgToPdf.canonical }
           ]),
-          getFAQSchema(tool.faqs || [])
-        ]}
+          getFAQSchema(tool.faqs || []),
+          tool.steps && getHowToSchema(tool.name, tool.description, tool.steps)
+        ].filter(Boolean)}
       />
 
        {result ? (
@@ -306,15 +313,15 @@ export default function ImgToPdfTool() {
               { title: "Generate PDF", desc: "Click Generate to create a single perfectly formatted PDF from your images locally." }
             ]}
             benefits={[
-              { title: "Local Conversion", desc: "We convert images to PDF directly in your browser. No data is sent to servers.", icon: <ShieldCheck className="w-8 h-8" /> },
-              { title: "Pro Customization", desc: "Full control over borders, background colors, and image scaling.", icon: <Settings2 className="w-8 h-8" /> },
-              { title: "All Formats", desc: "Support for JPG, JPEG, PNG, and modern WebP image formats.", icon: <ImageIcon className="w-8 h-8" /> }
+              { title: "Browser-Only Conversion", desc: "We convert images to PDF directly in your browser. No data is sent to servers, total privacy guaranteed.", icon: <ShieldCheck className="w-8 h-8" /> },
+              { title: "Smart Formatting", desc: "Full control over borders, background colors, and image scaling without server lag.", icon: <Settings2 className="w-8 h-8" /> },
+              { title: "No Upload Footprint", desc: "Support for JPG, JPEG, PNG, and WebP with zero trace left on the cloud.", icon: <ImageIcon className="w-8 h-8" /> }
             ]}
             faqs={tool.faqs || []}
             relatedTools={TOOLS.filter(t => t.id !== 'img-to-pdf')}
             seoContent={{
-              title: 'Create professional PDFs from your photos instantly',
-              content: 'Convert up to 50 images into a single, high-quality PDF document for free with DocBit. Our tool is designed for speed and absolute privacy, processing all your images locally in your browser. Whether you\'re a student combining assignment photos or a professional creating a document from scanned receipts, DocBit provides a seamless, mobile-friendly experience with no server uploads required.'
+              title: 'Create professional PDFs from your photos securely',
+              content: 'Convert images into a single, high-quality PDF document securely with DocBit. Our tool is designed for speed and absolute privacy, processing all your images locally in your browser. Whether you\'re a student combining assignment photos or a professional creating a document from scans, DocBit provides a seamless browser-based experience with zero server uploads required.'
             }}
           />
         </>
@@ -534,6 +541,17 @@ export default function ImgToPdfTool() {
            </div>
         </div>
       )}
+      <ToolContent 
+        toolName="Image to PDF"
+        toolType="Convert"
+        description="Transform your photos, scans, and images into professionally formatted PDF documents. Fast, secure, and entirely on your device."
+      />
+
+      <NavigationConfirmModal 
+        isOpen={blocker.state === 'blocked'}
+        onConfirm={() => blocker.proceed?.()}
+        onCancel={() => blocker.reset?.()}
+      />
     </div>
   );
 }

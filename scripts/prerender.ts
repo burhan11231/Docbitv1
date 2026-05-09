@@ -12,8 +12,10 @@ const __dirname = path.dirname(__filename);
 
 // Import data directly from source
 import { SEO_CONFIG, SITE_NAME, APP_DOMAIN, THEME_COLOR, GLOBAL_OG_IMAGE } from '../src/seo/seoConfig';
-import { getSoftwareAppSchema, getWebApplicationSchema, getBreadcrumbSchema, getFAQSchema } from '../src/seo/structuredData';
+import { getSoftwareAppSchema, getWebApplicationSchema, getBreadcrumbSchema, getWebSiteSchema, getHowToSchema } from '../src/seo/structuredData';
+import { getFAQSchema } from '../src/utils/schema/faqSchema';
 import { TOOLS } from '../src/constants/tools';
+import { GUIDES } from '../src/constants/guides';
 
 const DIST_DIR = path.join(process.cwd(), 'dist');
 const TEMPLATE_PATH = path.join(DIST_DIR, 'index.html');
@@ -30,23 +32,19 @@ const template = fs.readFileSync(TEMPLATE_PATH, 'utf8');
 function getNakedTemplate(html: string) {
   let naked = html;
   
-  // Strip Title, Description, Canonical
+  // Strip JSON-LD Scripts - handles multiline and varied attribute order
+  naked = naked.replace(/<script[^>]*?application\/ld\+json[^>]*?>[\s\S]*?<\/script>/gi, '');
+  
+  // Strip Title, Description, Keywords, Canonical
   naked = naked.replace(/<title>.*?<\/title>/gi, '');
   naked = naked.replace(/<meta name="description" content=".*?" \/>/gi, '');
   naked = naked.replace(/<meta name="keywords" content=".*?" \/>/gi, '');
   naked = naked.replace(/<link rel="canonical" href=".*?" \/>/gi, '');
   
-  // Strip OG Tags
+  // Strip OG Tags and Twitter Tags more broadly
   naked = naked.replace(/<meta property="og:.*?" content=".*?" \/>/gi, '');
-  naked = naked.replace(/<!-- Open Graph \/ Facebook -->/gi, '');
-  
-  // Strip Twitter Tags
   naked = naked.replace(/<meta name="twitter:.*?" content=".*?" \/>/gi, '');
   naked = naked.replace(/<meta property="twitter:.*?" content=".*?" \/>/gi, '');
-  naked = naked.replace(/<!-- Twitter -->/gi, '');
-  
-  // Strip JSON-LD Scripts
-  naked = naked.replace(/<script type="application\/ld\+json">.*?<\/script>/gi, '');
   
   // Strip SEO Placeholders comment and injection point
   naked = naked.replace(/<!-- SEO Placeholders -->/gi, '');
@@ -92,13 +90,38 @@ TOOLS.forEach(tool => {
   });
 });
 
+// Add guide routes from GUIDES constant
+GUIDES.forEach(guide => {
+  routes.push({
+    path: guide.slug,
+    config: {
+      title: guide.title,
+      description: guide.description,
+      canonical: `${APP_DOMAIN}${guide.slug}`,
+      ogImage: GLOBAL_OG_IMAGE
+    },
+    type: 'guide',
+    guideData: guide
+  });
+});
+
 function generateSchemas(route: any) {
   const schemas: any[] = [];
-  const { config, type, toolData } = route;
+  const { config, type, toolData, guideData } = route;
 
   if (type === 'home') {
     schemas.push(getSoftwareAppSchema(config.description));
+    schemas.push(getWebSiteSchema());
     schemas.push(getBreadcrumbSchema([{ name: 'Home', item: APP_DOMAIN }]));
+  } else if (type === 'guide' && guideData) {
+    schemas.push(getBreadcrumbSchema([
+      { name: 'Home', item: APP_DOMAIN },
+      { name: 'Help', item: `${APP_DOMAIN}/help` },
+      { name: guideData.title, item: config.canonical }
+    ]));
+    if (guideData.faqs) {
+      schemas.push(getFAQSchema(guideData.faqs));
+    }
   } else {
     // Breadcrumb for all non-home pages
     schemas.push(getBreadcrumbSchema([
@@ -110,6 +133,9 @@ function generateSchemas(route: any) {
       schemas.push(getWebApplicationSchema(config.title, config.description, config.canonical));
       if (toolData.faqs) {
         schemas.push(getFAQSchema(toolData.faqs));
+      }
+      if (toolData.steps) {
+        schemas.push(getHowToSchema(toolData.name, toolData.description, toolData.steps));
       }
     }
   }
@@ -156,7 +182,20 @@ routes.forEach((route) => {
     <meta name="twitter:site" content="@DocBit_In" />
 
     <!-- Structured Data -->
-    ${schemas.map(s => `<script type="application/ld+json">${JSON.stringify(s)}</script>`).join('\n    ')}
+    ${(() => {
+      const seenTypes = new Set();
+      return schemas
+        .filter(s => {
+          if (!s) return false;
+          const type = s['@type'];
+          if (!type) return true;
+          if (seenTypes.has(type)) return false;
+          seenTypes.add(type);
+          return true;
+        })
+        .map(s => `<script type="application/ld+json" id="schema-${(s['@type'] || 'item').toLowerCase().replace(/[^a-z0-9]/g, '-')}" data-rh="true">${JSON.stringify(s)}</script>`)
+        .join('\n    ');
+    })()}
   `;
 
   // Inject at the top of the head for best crawler compatibility
@@ -174,23 +213,47 @@ routes.forEach((route) => {
   fs.writeFileSync(outputPath, html);
 });
 
-// 4. Generate Sitemap
-console.log('\nGenerating Sitemap...');
-const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+// 4. Generate Split Sitemaps
+console.log('\nGenerating Split Sitemaps...');
+
+const today = new Date().toISOString().split('T')[0];
+
+const generateSitemapXml = (routes: any[]) => `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${routes.map(route => `  <url>
-    <loc>${configKeyToUrl(route)}</loc>
-    <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
+    <loc>${route.config.canonical}</loc>
+    <lastmod>${today}</lastmod>
     <changefreq>${route.type === 'tool' || route.type === 'home' ? 'weekly' : 'monthly'}</changefreq>
     <priority>${route.type === 'home' ? '1.0' : route.type === 'tool' ? '0.9' : '0.7'}</priority>
   </url>`).join('\n')}
 </urlset>`;
 
-function configKeyToUrl(route: any) {
-  return route.config.canonical;
-}
+const pagesRoutes = routes.filter(r => r.type === 'page' || r.type === 'home');
+const toolsRoutes = routes.filter(r => r.type === 'tool');
+const guidesRoutes = routes.filter(r => r.type === 'guide');
 
-fs.writeFileSync(path.join(DIST_DIR, 'sitemap.xml'), sitemap);
-console.log('Sitemap generated!');
+fs.writeFileSync(path.join(DIST_DIR, 'sitemap-pages.xml'), generateSitemapXml(pagesRoutes));
+fs.writeFileSync(path.join(DIST_DIR, 'sitemap-tools.xml'), generateSitemapXml(toolsRoutes));
+fs.writeFileSync(path.join(DIST_DIR, 'sitemap-guides.xml'), generateSitemapXml(guidesRoutes));
+
+// Generate Sitemap Index
+const sitemapIndex = `<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <sitemap>
+    <loc>${APP_DOMAIN}/sitemap-pages.xml</loc>
+    <lastmod>${today}</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>${APP_DOMAIN}/sitemap-tools.xml</loc>
+    <lastmod>${today}</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>${APP_DOMAIN}/sitemap-guides.xml</loc>
+    <lastmod>${today}</lastmod>
+  </sitemap>
+</sitemapindex>`;
+
+fs.writeFileSync(path.join(DIST_DIR, 'sitemap.xml'), sitemapIndex);
+console.log('Split Sitemaps and Index generated!');
 
 console.log('Static Generation Complete! Your dist/ directory is now SEO-ready.');

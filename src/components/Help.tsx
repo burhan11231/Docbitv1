@@ -1,9 +1,12 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { HelpCircle, ShieldCheck, Zap, Globe, FileQuestion, BookOpen, Layers } from 'lucide-react';
+import { HelpCircle, ShieldCheck, Zap, Globe, FileQuestion, BookOpen, Layers, ArrowRight } from 'lucide-react';
 import { SEO } from './SEO';
 import { SEO_CONFIG, APP_DOMAIN } from '../seo/seoConfig';
-import { getBreadcrumbSchema, getFAQSchema } from '../seo/structuredData';
+import { getBreadcrumbSchema } from '../seo/structuredData';
+import { getFAQSchema } from '../utils/schema/faqSchema';
+import { GUIDES } from '../constants/guides';
 
 export default function Help() {
   const categories = [
@@ -62,6 +65,38 @@ export default function Help() {
           <h1 className="text-4xl font-black dark:text-white uppercase italic tracking-tight">Help Center</h1>
           <p className="text-neutral-500 font-medium">Quick answers and detailed explanations for your DocBit experience.</p>
         </header>
+
+        {/* Educational Guides Section */}
+        <section className="space-y-10">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-black text-neutral-900 dark:text-white uppercase tracking-tight">Educational Guides</h2>
+            <div className="h-px bg-neutral-200 dark:bg-neutral-800 flex-1 ml-6"></div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {GUIDES.map((guide) => (
+              <Link 
+                key={guide.id}
+                to={guide.slug}
+                className="group p-8 rounded-[32px] bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 hover:shadow-2xl hover:scale-[1.02] transition-all"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 flex items-center justify-center mb-6 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                  {guide.icon}
+                </div>
+                <h3 className="font-black text-neutral-900 dark:text-white mb-3 text-lg leading-snug group-hover:text-blue-600 transition-colors">
+                  {guide.title}
+                </h3>
+                <p className="text-neutral-500 text-sm line-clamp-3 mb-6">
+                  {guide.description}
+                </p>
+                <div className="flex items-center text-blue-600 text-xs font-black uppercase tracking-widest gap-2">
+                  Read full guide
+                  <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
 
         <div className="space-y-16">
           {categories.map((category, idx) => (

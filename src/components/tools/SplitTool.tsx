@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Dropzone } from '../Dropzone';
 import { PDFDocument } from 'pdf-lib';
 import * as pdfjs from 'pdfjs-dist';
+import { useFileExitConfirm } from '../../hooks/useFileExitConfirm';
+import { NavigationConfirmModal } from '../NavigationConfirmModal';
 import { 
   Scissors, 
   Download, 
@@ -21,14 +23,16 @@ import { DownloadResult } from '../DownloadResult';
 import { ImageViewer } from '../ImageViewer';
 import { SEO } from '../SEO';
 import { ToolInfo } from '../ToolInfo';
+import { ToolContent } from '../ToolContent';
 import { ShieldCheck, Zap, Globe } from 'lucide-react';
 import { TOOLS } from '../../constants/tools';
 import { SEO_CONFIG, APP_DOMAIN } from '../../seo/seoConfig';
 import { 
   getWebApplicationSchema, 
-  getBreadcrumbSchema, 
-  getFAQSchema 
+  getBreadcrumbSchema,
+  getHowToSchema
 } from '../../seo/structuredData';
+import { getFAQSchema } from '../../utils/schema/faqSchema';
 
 // Configure pdfjs worker
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -52,6 +56,8 @@ export default function SplitTool() {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [highResPreview, setHighResPreview] = useState<string | null>(null);
   const [isRenderingPreview, setIsRenderingPreview] = useState(false);
+
+  const blocker = useFileExitConfirm({ isDirty: !!file && !result });
 
   const handleFiles = async (files: File[]) => {
     if (files.length === 0) return;
@@ -183,8 +189,9 @@ export default function SplitTool() {
             { name: 'Home', item: APP_DOMAIN },
             { name: 'Split PDF', item: SEO_CONFIG.split.canonical }
           ]),
-          getFAQSchema(tool.faqs || [])
-        ]}
+          getFAQSchema(tool.faqs || []),
+          tool.steps && getHowToSchema(tool.name, tool.description, tool.steps)
+        ].filter(Boolean)}
       />
 
        {result ? (
@@ -206,15 +213,15 @@ export default function SplitTool() {
               { title: "Split & Zip", desc: "Download your split pages instantly. We'll pack them in a ZIP." }
             ]}
             benefits={[
-              { title: "In-Browser Split", desc: "No uploads. Your document is split locally, ensuring total privacy.", icon: <ShieldCheck className="w-8 h-8" /> },
-              { title: "Range Support", desc: "Extract specific pages like '1, 3, 5-10' with our intelligent parser.", icon: <Zap className="w-8 h-8" /> },
-              { title: "No Subscription", desc: "Get full access to all splitting features without any account or fees.", icon: <Globe className="w-8 h-8" /> }
+              { title: "Browser-Based Split", desc: "No uploads. Your document is split locally in your browser, ensuring total privacy.", icon: <ShieldCheck className="w-8 h-8" /> },
+              { title: "Instant Extraction", desc: "Extract specific pages or ranges like '1, 3, 5-10' instantly with zero server lag.", icon: <Zap className="w-8 h-8" /> },
+              { title: "Privacy First", desc: "Handle sensitive documents with confidence. Files never touch any server or cloud storage.", icon: <Globe className="w-8 h-8" /> }
             ]}
             faqs={tool.faqs || []}
             relatedTools={TOOLS.filter(t => t.id !== 'split')}
             seoContent={{
-              title: 'Split PDF pages into separate files instantly',
-              content: 'Need to extract a single page or divide a large PDF? DocBit offers the fastest way to split PDF online while keeping your data 100% private. Our tool runs entirely in your browser, meaning your sensitive documents never leave your computer. Perfect for separating chapters, extracting receipts, or breaking down large reports into manageable sections.'
+              title: 'Extract PDF pages using secure local processing',
+              content: 'Need to extract a single page or divide a large PDF? DocBit offers a fast, cloud-free way to split PDF online while keeping your data private. Our tool runs entirely in your browser session, meaning your sensitive documents never leave your computer. Perfect for separating chapters, extracting receipts, or breaking down large reports into manageable sections without server uploads.'
             }}
           />
         </>
@@ -355,6 +362,17 @@ export default function SplitTool() {
            </div>
         </div>
        )}
+       <ToolContent 
+        toolName="Split PDF"
+        toolType="Split"
+        description="Extract specific pages or split every page into separate documents. Local processing ensures your sensitive data never leaves your machine."
+      />
+
+      <NavigationConfirmModal 
+        isOpen={blocker.state === 'blocked'}
+        onConfirm={() => blocker.proceed?.()}
+        onCancel={() => blocker.reset?.()}
+      />
     </div>
   );
 }

@@ -19,6 +19,7 @@ export interface PDFTool {
   category: ToolCategory;
   href: string;
   faqs?: { q: string; a: string }[];
+  steps?: { name: string; text: string }[];
 }
 
 export const TOOLS: PDFTool[] = [
@@ -40,6 +41,12 @@ export const TOOLS: PDFTool[] = [
       { q: 'Is DocBit Image to PDF converter free?', a: 'Yes, DocBit is 100% free with no hidden charges or premium subscriptions.' },
       { q: 'Are my images uploaded to any server?', a: 'No. DocBit uses advanced on-device processing. Your images are converted to PDF directly in your browser and never touch our servers.' },
       { q: 'Can I use this tool on my mobile phone?', a: 'Absolutely! DocBit is fully optimized for mobile browsers, making it easy to create PDFs from your phone gallery.' }
+    ],
+    steps: [
+      { name: 'Upload Images', text: 'Select or drag and drop JPG, PNG, or other image files.' },
+      { name: 'Arrange Files', text: 'Reorder your images if needed by dragging them.' },
+      { name: 'Configure Metadata', text: 'Optionally add a title, author, or subject to your PDF.' },
+      { name: 'Convert and Download', text: 'Click "Convert to PDF" and download your finished document.' }
     ],
     icon: <FileImage className="w-6 h-6" />,
     category: 'convert',
@@ -65,6 +72,12 @@ export const TOOLS: PDFTool[] = [
       { q: 'Is there a limit on file size?', a: 'Since processing is local, the only limit is your device\'s memory and processing power. We recommend files under 50MB for the best experience.' },
       { q: 'Do I need to sign up to use DocBit?', a: 'No signup or account is required. You can start converting PDFs to images immediately.' }
     ],
+    steps: [
+      { name: 'Upload PDF', text: 'Select the PDF file you want to convert into images.' },
+      { name: 'Processing', text: 'DocBit will automatically extract each page as an image.' },
+      { name: 'Select Format', text: 'Choose between PNG or JPG output format.' },
+      { name: 'Download Images', text: 'Download individual pages or all images as a zip file.' }
+    ],
     icon: <Images className="w-6 h-6" />,
     category: 'convert',
     href: '/tools/pdf-to-images',
@@ -89,6 +102,12 @@ export const TOOLS: PDFTool[] = [
       { q: 'Is merging PDFs on DocBit secure?', a: 'Extremely secure. Since your files are never uploaded to a server, your sensitive data stays on your machine throughout the merging process.' },
       { q: 'Can I reorder files before merging?', a: 'Yes, you can easily drag and drop files to change their sequence before clicking merge.' }
     ],
+    steps: [
+      { name: 'Upload PDF Files', text: 'Select multiple PDF documents you wish to combine.' },
+      { name: 'Arrange Order', text: 'Drag and drop files to set the preferred order.' },
+      { name: 'Merge', text: 'Click the "Merge PDF" button to combine them.' },
+      { name: 'Download', text: 'Save the new single PDF file to your device.' }
+    ],
     icon: <Combine className="w-6 h-6" />,
     category: 'edit',
     href: '/tools/merge-pdf',
@@ -112,6 +131,12 @@ export const TOOLS: PDFTool[] = [
       { q: 'How do I extract a specific page range from a PDF?', a: 'Select the "Range" mode, enter the page numbers you want, and DocBit will generate a new PDF with just those pages.' },
       { q: 'Does splitting a PDF reduce its quality?', a: 'No, DocBit preserves the original quality of your pages during the splitting process.' },
       { q: 'Is it safe to split sensitive documents here?', a: 'Yes. Because all splitting happens locally in your browser, your document contents are never transmitted over the internet.' }
+    ],
+    steps: [
+      { name: 'Upload PDF', text: 'Select the PDF file you want to split.' },
+      { name: 'Choose Range', text: 'Select "All Pages" to split every page or "Range" to extract specific ones.' },
+      { name: 'Split', text: 'Click "Split PDF" to process the file.' },
+      { name: 'Download', text: 'Download your split files individually or as a single collection.' }
     ],
     icon: <Scissors className="w-6 h-6" />,
     category: 'edit',

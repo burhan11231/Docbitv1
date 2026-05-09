@@ -48,17 +48,34 @@ export const getBreadcrumbSchema = (items: { name: string; item: string }[]) => 
   };
 };
 
-export const getFAQSchema = (faqs: { q: string; a: string }[]) => {
+export const getWebSiteSchema = () => {
   return {
     "@context": "https://schema.org",
-    "@type": "FAQPage",
-    "mainEntity": faqs.map((faq) => ({
-      "@type": "Question",
-      "name": faq.q,
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": faq.a
-      }
+    "@type": "WebSite",
+    "name": SITE_NAME,
+    "url": APP_DOMAIN,
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": {
+        "@type": "EntryPoint",
+        "urlTemplate": `${APP_DOMAIN}/?q={search_term_string}`
+      },
+      "query-input": "required name=search_term_string"
+    }
+  };
+};
+
+export const getHowToSchema = (name: string, description: string, steps: { name: string; text: string }[]) => {
+  return {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    "name": name,
+    "description": description,
+    "step": steps.map((step, index) => ({
+      "@type": "HowToStep",
+      "position": index + 1,
+      "name": step.name,
+      "text": step.text
     }))
   };
 };
