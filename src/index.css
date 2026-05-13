@@ -8,6 +8,13 @@
 @variant dark (&:where(.dark, .dark *));
 
 @layer base {
+  html, body {
+    margin: 0;
+    padding: 0;
+    min-height: 100%;
+    width: 100%;
+  }
+
   body {
     @apply font-plus-jakarta selection:bg-blue-100 dark:selection:bg-blue-900/30;
     overscroll-behavior-y: contain;

@@ -25,7 +25,7 @@ import {
   Globe,
   Image as ImageIcon
 } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { readFileAsArrayBuffer, cn, formatBytes } from '../../lib/utils';
 import { DownloadResult } from '../DownloadResult';
 import { ImageViewer } from '../ImageViewer';
@@ -60,6 +60,8 @@ export default function ImgToPdfTool() {
   const [images, setImages] = useState<ImgData[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isAddingFiles, setIsAddingFiles] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [processingStage, setProcessingStage] = useState('');
   
   // Layout Settings
   const [fitMode, setFitMode] = useState<FitMode>('fit');
@@ -76,6 +78,7 @@ export default function ImgToPdfTool() {
   const [spacing, setSpacing] = useState(0);
 
   const [result, setResult] = useState<{ url: string; size: number } | null>(null);
+  const [isDownloaded, setIsDownloaded] = useState(false);
   const [viewerItem, setViewerItem] = useState<ImgData | null>(null);
 
   const blocker = useFileExitConfirm({ isDirty: images.length > 0 && !result });
@@ -94,6 +97,7 @@ export default function ImgToPdfTool() {
 
     setImages(prev => [...prev, ...pending]);
     setResult(null);
+    setIsDownloaded(false);
 
     // Process each image (generate thumbnail)
     for (const item of pending) {
@@ -142,6 +146,8 @@ export default function ImgToPdfTool() {
   const convertToPdf = async () => {
     if (images.length === 0) return;
     setIsProcessing(true);
+    setProgress(0);
+    setProcessingStage('Initializing engine...');
 
     try {
       const pdfDoc = await PDFDocument.create();
@@ -150,6 +156,10 @@ export default function ImgToPdfTool() {
       const qualityValue = quality === 'high' ? 0.95 : quality === 'medium' ? 0.8 : 0.6;
 
       for (let i = 0; i < images.length; i++) {
+        const currentProgress = Math.round((i / images.length) * 100);
+        setProgress(currentProgress);
+        setProcessingStage(`Rendering image ${i + 1} of ${images.length}...`);
+
         const imgData = images[i];
         const img = new Image();
         img.src = imgData.thumbnail;
@@ -250,15 +260,21 @@ export default function ImgToPdfTool() {
         });
       }
 
+      setProcessingStage('Finalizing PDF...');
+      setProgress(100);
+
       const pdfBytes = await pdfDoc.save();
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
       setResult({ url, size: blob.size });
+      setIsDownloaded(false);
     } catch (e) {
       console.error(e);
       alert('Error during conversion.');
     } finally {
       setIsProcessing(false);
+      setProgress(0);
+      setProcessingStage('');
     }
   };
 
@@ -268,6 +284,7 @@ export default function ImgToPdfTool() {
     link.href = result.url;
     link.download = `docbit_images_${new Date().getTime()}.pdf`;
     link.click();
+    setIsDownloaded(true);
   };
 
   return (
@@ -289,14 +306,20 @@ export default function ImgToPdfTool() {
         ].filter(Boolean)}
       />
 
-       {result ? (
-        <DownloadResult 
-          filename="images_to_pdf.pdf" 
-          size={result.size} 
-          onDownload={handleDownload} 
-          onReset={() => { setImages([]); setResult(null); }} 
-        />
-       ) : images.length === 0 ? (
+      <AnimatePresence>
+        {result && (
+          <DownloadResult 
+            filename="images_to_pdf.pdf" 
+            size={result.size} 
+            onDownload={handleDownload} 
+            isDownloaded={isDownloaded}
+            onBack={() => setResult(null)}
+            onReset={() => { setImages([]); setResult(null); setIsDownloaded(false); }} 
+          />
+        )}
+      </AnimatePresence>
+
+       {images.length === 0 ? (
         <Dropzone 
           onFilesSelected={handleFiles} 
           maxFiles={50} 
@@ -305,221 +328,225 @@ export default function ImgToPdfTool() {
           label="Select Images (JPG, PNG, WebP)" 
         />
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-           <div className="lg:col-span-8 space-y-6">
-              <div className="flex items-center justify-between px-2">
-                <div className="space-y-1">
-                  <h1 className="text-2xl font-black flex items-center gap-3">
-                    Convert Images to PDF
-                  </h1>
-                  <p className="text-xs font-bold uppercase tracking-widest text-neutral-400">Turn multiple images into a single high-quality PDF in seconds.</p>
+        <div className="space-y-8 italic">
+          {/* Header section */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 px-2">
+            <div className="space-y-2">
+              <h1 className="text-3xl font-black flex items-center gap-3">
+                Convert Images to PDF
+              </h1>
+              <p className="text-sm font-bold uppercase tracking-widest text-neutral-400 font-mono italic">Sequential Composition Engine</p>
+            </div>
+            <label className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl transition-all shadow-lg shadow-blue-500/20 cursor-pointer active:scale-95 text-sm uppercase italic tracking-tighter shrink-0">
+              <Plus className="w-5 h-5" />
+              ADD MORE
+              <input type="file" multiple className="hidden" accept="image/*" onChange={(e) => e.target.files && handleFiles(Array.from(e.target.files))} />
+            </label>
+          </div>
+
+          {/* Layout and Advanced Options - Wide Section at Top */}
+          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[40px] p-8 shadow-xl shadow-black/5 space-y-10 not-italic">
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+              <div className="xl:col-span-8 flex flex-col h-full space-y-8">
+                <div className="flex items-center gap-2 text-blue-600">
+                  <Layout className="w-5 h-5" />
+                  <h3 className="text-xs font-black tracking-widest uppercase">Layout Configuration</h3>
                 </div>
-                <label className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl transition-all shadow-lg shadow-blue-500/20 cursor-pointer active:scale-95 text-sm">
-                  <Plus className="w-4 h-4" />
-                  ADD
-                  <input type="file" multiple className="hidden" accept="image/*" onChange={(e) => e.target.files && handleFiles(Array.from(e.target.files))} />
-                </label>
-              </div>
 
-              <div className="grid grid-cols-1 gap-3">
-                {images.map((img, idx) => (
-                  <ImgItem 
-                    key={img.id} 
-                    img={img} 
-                    index={idx}
-                    isFirst={idx === 0}
-                    isLast={idx === images.length - 1}
-                    handleRotate={handleRotate}
-                    removeImg={removeImg} 
-                    handleMove={handleMove}
-                    onViewer={setViewerItem}
-                  />
-                ))}
-              </div>
-           </div>
-
-           <ImageViewer 
-             src={viewerItem?.thumbnail || ''} 
-             rotation={viewerItem?.rotation || 0}
-             isOpen={!!viewerItem} 
-             onClose={() => setViewerItem(null)} 
-           />
-
-           <div className="lg:col-span-4 space-y-6">
-              <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[32px] p-8 shadow-xl shadow-black/5 space-y-8">
-                 <div className="space-y-8">
-                    {/* Layout Settings */}
-                    <div className="space-y-6">
-                      <div className="flex items-center gap-2 text-blue-600">
-                        <Layout className="w-4 h-4" />
-                        <h3 className="text-[10px] font-black tracking-widest uppercase">Layout Configuration</h3>
-                      </div>
-                      
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                           <p className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">Page Format</p>
-                           <div className="grid grid-cols-2 gap-2">
-                             {['A4', 'A3', 'Letter', 'Custom'].map(s => (
-                               <button
-                                 key={s}
-                                 onClick={() => setPageSize(s as any)}
-                                 className={cn(
-                                   "py-2.5 rounded-xl border-2 font-bold text-[10px] uppercase tracking-widest transition-all",
-                                   pageSize === s ? "border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-600" : "border-neutral-100 dark:border-neutral-800 text-neutral-400"
-                                 )}
-                               >{s}</button>
-                             ))}
-                           </div>
-                        </div>
-
-                        {pageSize === 'Custom' && (
-                          <div className="grid grid-cols-2 gap-3">
-                             <div className="space-y-1">
-                                <p className="text-[8px] font-bold text-neutral-400 uppercase">Width (pt)</p>
-                                <input type="number" value={customWidth} onChange={(e) => setCustomWidth(Number(e.target.value))} className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-800 rounded-lg text-sm font-bold border-none focus:ring-2 focus:ring-blue-500" />
-                             </div>
-                             <div className="space-y-1">
-                                <p className="text-[8px] font-bold text-neutral-400 uppercase">Height (pt)</p>
-                                <input type="number" value={customHeight} onChange={(e) => setCustomHeight(Number(e.target.value))} className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-800 rounded-lg text-sm font-bold border-none focus:ring-2 focus:ring-blue-500" />
-                             </div>
-                          </div>
-                        )}
-
-                        {pageSize !== 'Custom' && (
-                          <div className="space-y-2">
-                             <p className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">Orientation</p>
-                             <div className="grid grid-cols-2 gap-2">
-                               {['portrait', 'landscape'].map(o => (
-                                 <button
-                                   key={o}
-                                   onClick={() => setOrientation(o as Orientation)}
-                                   className={cn(
-                                     "py-2.5 rounded-xl border-2 font-bold text-[10px] uppercase tracking-widest transition-all",
-                                     orientation === o ? "border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-600" : "border-neutral-100 dark:border-neutral-800 text-neutral-400"
-                                   )}
-                                 >{o}</button>
-                               ))}
-                             </div>
-                          </div>
-                        )}
-
-                        <div className="space-y-2">
-                          <p className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">Fit Algorithm</p>
-                          <div className="grid grid-cols-3 gap-2">
-                            {[
-                              { id: 'fit', icon: <Minimize2 className="w-3 h-3" /> },
-                              { id: 'fill', icon: <Maximize2 className="w-3 h-3" /> },
-                              { id: 'stretch', icon: <StretchHorizontal className="w-3 h-3" /> }
-                            ].map(m => (
-                              <button
-                                key={m.id}
-                                onClick={() => setFitMode(m.id as FitMode)}
-                                className={cn(
-                                  "flex flex-col items-center gap-1 py-2.5 rounded-xl border-2 font-bold text-[8px] uppercase tracking-widest transition-all",
-                                  fitMode === m.id ? "border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-600" : "border-neutral-100 dark:border-neutral-800 text-neutral-400"
-                                )}
-                              >
-                                {m.icon}
-                                {m.id}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="space-y-4">
-                           <p className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">Margins (pt)</p>
-                           <div className="grid grid-cols-2 gap-2">
-                              <div className="space-y-1">
-                                 <p className="text-[8px] font-bold text-neutral-400 uppercase">Top/Bottom</p>
-                                 <input type="number" value={margin.top} onChange={(e) => setMargin(m => ({ ...m, top: Number(e.target.value), bottom: Number(e.target.value) }))} className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-800 rounded-lg text-sm font-bold border-none" />
-                              </div>
-                              <div className="space-y-1">
-                                 <p className="text-[8px] font-bold text-neutral-400 uppercase">Left/Right</p>
-                                 <input type="number" value={margin.left} onChange={(e) => setMargin(m => ({ ...m, left: Number(e.target.value), right: Number(e.target.value) }))} className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-800 rounded-lg text-sm font-bold border-none" />
-                              </div>
-                           </div>
-                        </div>
-
-                        <div className="space-y-3">
-                           <p className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">Canvas Background</p>
-                           <button 
-                             onClick={() => setIsColorPickerOpen(true)}
-                             className="w-full flex items-center gap-3 p-3 bg-neutral-50 dark:bg-neutral-800 rounded-2xl group hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-all border border-transparent hover:border-neutral-200 dark:hover:border-neutral-700"
-                           >
-                             <div 
-                               className="w-10 h-10 rounded-xl shadow-inner border border-black/5 flex items-center justify-center"
-                               style={{ backgroundColor: bgColor }}
-                             >
-                               <div className={cn(
-                                 "w-4 h-4 rounded-full",
-                                 parseInt(bgColor.replace('#', ''), 16) > 0xffffff / 2 ? "bg-black/10" : "bg-white/20"
-                               )} />
-                             </div>
-                             <div className="flex-1 text-left">
-                                <p className="text-[10px] font-black uppercase text-neutral-900 dark:text-white">{bgColor}</p>
-                                <p className="text-[8px] font-bold text-neutral-400 uppercase tracking-widest">Tap to refine</p>
-                             </div>
-                           </button>
-
-                           <ColorPickerModal 
-                             isOpen={isColorPickerOpen}
-                             onClose={() => setIsColorPickerOpen(false)}
-                             color={bgColor}
-                             onChange={setBgColor}
-                             title="Background Color"
-                           />
-                        </div>
-                      </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* Left Sub-Column */}
+                  <div className="space-y-6">
+                    <div className="space-y-3">
+                       <p className="text-[10px] font-black uppercase text-neutral-400 tracking-wider italic">Page Format</p>
+                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                         {['A4', 'A3', 'Letter', 'Custom'].map(s => (
+                           <button
+                             key={s}
+                             onClick={() => setPageSize(s as any)}
+                             className={cn(
+                               "py-2.5 rounded-xl border-2 font-black text-[10px] uppercase transition-all shadow-sm",
+                               pageSize === s ? "border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-600" : "border-neutral-100 dark:border-neutral-800 text-neutral-400 hover:border-neutral-200"
+                             )}
+                           >{s}</button>
+                         ))}
+                       </div>
                     </div>
 
-                    {/* Advanced Options */}
-                    <div className="space-y-6 pt-6 border-t border-neutral-100 dark:border-neutral-800">
-                      <div className="flex items-center gap-2 text-purple-600">
-                        <Settings2 className="w-4 h-4" />
-                        <h3 className="text-[10px] font-black tracking-widest uppercase">Advanced Features</h3>
-                      </div>
-
-                      <div className="space-y-5">
-                         <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                               <ImageIcon className="w-3 h-3 text-neutral-400" />
-                               <span className="text-[10px] font-black uppercase text-neutral-500 tracking-wider">Export Quality</span>
-                            </div>
-                            <div className="grid grid-cols-3 gap-2">
-                               {['small', 'medium', 'high'].map(q => (
-                                 <button
-                                   key={q}
-                                   onClick={() => setQuality(q as any)}
-                                   className={cn(
-                                     "py-2 rounded-xl border-2 font-bold text-[8px] uppercase tracking-widest transition-all",
-                                     quality === q ? "border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-600" : "border-neutral-100 dark:border-neutral-800 text-neutral-400"
-                                   )}
-                                 >{q}</button>
-                               ))}
-                            </div>
+                    {pageSize === 'Custom' ? (
+                      <div className="grid grid-cols-2 gap-4 animate-in slide-in-from-top-1 duration-300">
+                         <div className="space-y-1.5">
+                            <p className="text-[8px] font-black text-neutral-400 uppercase tracking-widest">Width (pt)</p>
+                            <input type="number" value={customWidth} onChange={(e) => setCustomWidth(Number(e.target.value))} className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 rounded-xl text-sm font-black border-2 border-transparent focus:border-blue-500 transition-all outline-none" />
+                         </div>
+                         <div className="space-y-1.5">
+                            <p className="text-[8px] font-black text-neutral-400 uppercase tracking-widest">Height (pt)</p>
+                            <input type="number" value={customHeight} onChange={(e) => setCustomHeight(Number(e.target.value))} className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 rounded-xl text-sm font-black border-2 border-transparent focus:border-blue-500 transition-all outline-none" />
                          </div>
                       </div>
+                    ) : (
+                      <div className="space-y-3">
+                         <p className="text-[10px] font-black uppercase text-neutral-400 tracking-wider italic">Orientation</p>
+                         <div className="grid grid-cols-2 gap-2">
+                           {['portrait', 'landscape'].map(o => (
+                             <button
+                               key={o}
+                               onClick={() => setOrientation(o as Orientation)}
+                               className={cn(
+                                 "py-2.5 rounded-xl border-2 font-black text-[10px] uppercase transition-all shadow-sm",
+                                 orientation === o ? "border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-600" : "border-neutral-100 dark:border-neutral-800 text-neutral-400 hover:border-neutral-200"
+                               )}
+                             >{o}</button>
+                           ))}
+                         </div>
+                      </div>
+                    )}
+                    
+                    <div className="space-y-3">
+                       <p className="text-[10px] font-black uppercase text-neutral-400 tracking-wider italic">Background</p>
+                       <button 
+                         onClick={() => setIsColorPickerOpen(true)}
+                         className="w-full flex items-center justify-between p-4 bg-neutral-50 dark:bg-neutral-800 rounded-2xl border-2 border-transparent hover:border-blue-500 transition-all group"
+                       >
+                         <div className="flex items-center gap-4">
+                           <div className="w-10 h-10 rounded-xl shadow-lg border border-white/20" style={{ backgroundColor: bgColor }} />
+                           <span className="text-xs font-black uppercase text-neutral-900 dark:text-white">{bgColor}</span>
+                         </div>
+                         <Palette className="w-4 h-4 text-neutral-400 group-hover:text-blue-600 transition-colors" />
+                       </button>
                     </div>
-                 </div>
+                  </div>
 
-                 <div className="pt-6 border-t border-neutral-100 dark:border-neutral-800">
-                    <button 
-                      onClick={convertToPdf}
-                      disabled={isProcessing}
-                      className="w-full py-5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl shadow-xl shadow-blue-500/20 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-                    >
-                      {isProcessing ? <Loader2 className="w-6 h-6 animate-spin" /> : <Wand2 className="w-6 h-6" />}
-                      {isProcessing ? 'GENERATING...' : 'GENERATE'}
-                    </button>
-                    <div className="mt-4 flex items-center justify-center gap-2 text-[8px] font-black uppercase text-neutral-400 tracking-[0.2em]">
-                       <Shield className="w-3 h-3" />
-                       Zero-Trace Conversion
+                  {/* Right Sub-Column */}
+                  <div className="space-y-6">
+                    <div className="space-y-3">
+                      <p className="text-[10px] font-black uppercase text-neutral-400 tracking-wider italic">Fit Algorithm</p>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { id: 'fit', label: 'Contain', icon: <Minimize2 className="w-4 h-4 text-blue-500" /> },
+                          { id: 'fill', label: 'Cover', icon: <Maximize2 className="w-4 h-4 text-purple-500" /> },
+                          { id: 'stretch', label: 'Warp', icon: <StretchHorizontal className="w-4 h-4 text-orange-500" /> }
+                        ].map(m => (
+                          <button
+                            key={m.id}
+                            onClick={() => setFitMode(m.id as FitMode)}
+                            className={cn(
+                              "flex flex-col items-center justify-center gap-2 py-4 rounded-xl border-2 transition-all shadow-sm",
+                              fitMode === m.id ? "border-current bg-current/5" : "border-neutral-100 dark:border-neutral-800 text-neutral-400 hover:border-neutral-200"
+                            )}
+                            style={{ color: fitMode === m.id ? (m.id === 'fit' ? '#2563eb' : m.id === 'fill' ? '#9333ea' : '#ea580c') : undefined }}
+                          >
+                            {m.icon}
+                            <span className="text-[8px] font-black uppercase tracking-widest">{m.label}</span>
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                 </div>
+
+                    <div className="space-y-3">
+                       <p className="text-[10px] font-black uppercase text-neutral-400 tracking-wider italic">Margins (px)</p>
+                       <div className="grid grid-cols-2 gap-3">
+                          <div className="relative">
+                             <input type="number" value={margin.top} onChange={(e) => setMargin(m => ({ ...m, top: Number(e.target.value), bottom: Number(e.target.value) }))} className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 rounded-xl text-sm font-black border-2 border-transparent focus:border-blue-500" />
+                             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[8px] font-black text-neutral-300 uppercase">Y-Axis</span>
+                          </div>
+                          <div className="relative">
+                             <input type="number" value={margin.left} onChange={(e) => setMargin(m => ({ ...m, left: Number(e.target.value), right: Number(e.target.value) }))} className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 rounded-xl text-sm font-black border-2 border-transparent focus:border-blue-500" />
+                             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[8px] font-black text-neutral-300 uppercase">X-Axis</span>
+                          </div>
+                       </div>
+                    </div>
+
+                    <div className="space-y-3">
+                       <p className="text-[10px] font-black uppercase text-neutral-400 tracking-wider italic">Image Fidelity</p>
+                       <div className="flex gap-1 p-1 bg-neutral-100 dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700">
+                          {['small', 'medium', 'high'].map(q => (
+                            <button
+                              key={q}
+                              onClick={() => setQuality(q as any)}
+                              className={cn(
+                                "flex-1 py-2 rounded-lg font-black text-[9px] uppercase transition-all",
+                                quality === q ? "bg-white dark:bg-neutral-700 text-blue-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
+                              )}
+                            >{q}</button>
+                          ))}
+                       </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-           </div>
+
+              <div className="xl:col-span-4 h-full border-t xl:border-t-0 xl:border-l border-neutral-100 dark:border-neutral-800 pt-8 xl:pt-0 xl:pl-8 flex flex-col justify-center">
+                <div className="space-y-6">
+                  {isProcessing && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-black uppercase text-blue-600 tracking-widest">{processingStage}</span>
+                        <span className="text-[10px] font-black text-blue-600">{progress}%</span>
+                      </div>
+                      <div className="h-2 w-full bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+                        <motion.div initial={{ width: 0 }} animate={{ width: `${progress}%` }} className="h-full bg-blue-600" />
+                      </div>
+                    </div>
+                  )}
+                  <button 
+                    onClick={convertToPdf}
+                    disabled={isProcessing}
+                    className="group w-full py-6 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-black rounded-[24px] shadow-2xl shadow-blue-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
+                  >
+                    {isProcessing ? <Loader2 className="w-6 h-6 animate-spin" /> : <Wand2 className="w-6 h-6 transition-transform group-hover:scale-110" />}
+                    <span className="text-xl tracking-tight uppercase italic">{isProcessing ? 'COMPILING...' : 'EXPORT TO PDF'}</span>
+                  </button>
+                  <div className="flex flex-col items-center gap-3">
+                     <div className="flex items-center justify-center gap-2 text-[8px] font-black uppercase text-neutral-400 tracking-[0.2em]">
+                       <ShieldCheck className="w-3.5 h-3.5 text-blue-500" />
+                       Safe Sandbox Processing
+                     </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <ColorPickerModal 
+            isOpen={isColorPickerOpen}
+            onClose={() => setIsColorPickerOpen(false)}
+            color={bgColor}
+            onChange={setBgColor}
+            title="Canvas Background"
+          />
+
+          <ImageViewer 
+            src={viewerItem?.thumbnail || ''} 
+            rotation={viewerItem?.rotation || 0}
+            isOpen={!!viewerItem} 
+            onClose={() => setViewerItem(null)} 
+          />
+
+          {/* List Section */}
+          <div className="space-y-4 not-italic">
+            <div className="flex items-center gap-3 px-2">
+              <ImageIcon className="w-5 h-5 text-blue-600" />
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 italic">Page Sequence ({images.length})</h3>
+            </div>
+            <div className="grid grid-cols-1 gap-3">
+              {images.map((img, idx) => (
+                <ImgItem 
+                  key={img.id} 
+                  img={img} 
+                  index={idx}
+                  isFirst={idx === 0}
+                  isLast={idx === images.length - 1}
+                  handleRotate={handleRotate}
+                  removeImg={removeImg} 
+                  handleMove={handleMove}
+                  onViewer={setViewerItem}
+                />
+              ))}
+            </div>
+          </div>
         </div>
       )}
+
       <ToolContent 
         toolId={tool.id}
         toolName="Image to PDF"

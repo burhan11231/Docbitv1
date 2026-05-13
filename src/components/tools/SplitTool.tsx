@@ -9,26 +9,21 @@ import {
   Download, 
   Loader2,
   Settings2,
-  Layers,
   FileText,
-  X,
   Shield,
-  FileBox,
   LayoutGrid,
   Check,
+  Layers,
+  AlertCircle,
+  FileBox,
   Plus,
-  Zap,
-  ShieldCheck,
-  Globe,
-  AlertCircle
+  X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { readFileAsArrayBuffer, cn, formatBytes } from '../../lib/utils';
-import JSZip from 'jszip';
 import { DownloadResult } from '../DownloadResult';
 import { ImageViewer } from '../ImageViewer';
 import { SEO } from '../SEO';
-import { ToolInfo } from '../ToolInfo';
 import { ToolContent } from '../ToolContent';
 import { TOOLS } from '../../constants/tools';
 import { SEO_CONFIG, APP_DOMAIN } from '../../seo/seoConfig';
@@ -38,7 +33,6 @@ import {
   getHowToSchema
 } from '../../seo/structuredData';
 import { getFAQSchema } from '../../utils/schema/faqSchema';
-
 import { TOOL_SEO_CONTENT } from '../../constants/toolSeoContent';
 
 // Configure pdfjs worker
@@ -49,19 +43,22 @@ type SplitMode = 'all' | 'range' | 'extract';
 export default function SplitTool() {
   const tool = TOOLS.find(t => t.id === 'split')!;
   const [file, setFile] = useState<File | null>(null);
+  const [pdfDoc, setPdfDoc] = useState<pdfjs.PDFDocumentProxy | null>(null);
   const [isLoadingFile, setIsLoadingFile] = useState(false);
-  const [pdfDoc, setPdfDoc] = useState<PDFDocument | null>(null);
-  const [pdfProxy, setPdfProxy] = useState<pdfjs.PDFDocumentProxy | null>(null);
   const [totalPages, setTotalPages] = useState(0);
   const [thumbnails, setThumbnails] = useState<string[]>([]);
-  const [selectedPages, setSelectedPages] = useState<Set<number>>(new Set());
   
-  const [isSplitting, setIsSplitting] = useState(false);
   const [splitMode, setSplitMode] = useState<SplitMode>('all');
   const [rangeStr, setRangeStr] = useState('');
+  const [selectedPages, setSelectedPages] = useState<Set<number>>(new Set());
   const [rangeError, setRangeError] = useState<string | null>(null);
   
-  const [result, setResult] = useState<{ url: string; size: number; isZip: boolean; name: string } | null>(null);
+  const [isSplitting, setIsSplitting] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [processingStage, setProcessingStage] = useState('');
+  const [result, setResult] = useState<{ url: string; size: number } | null>(null);
+  const [isDownloaded, setIsDownloaded] = useState(false);
+  
   const [viewerImage, setViewerImage] = useState<string | null>(null);
   const [highResViewerImage, setHighResViewerImage] = useState<string | null>(null);
   const [isRenderingViewer, setIsRenderingViewer] = useState(false);
@@ -74,27 +71,22 @@ export default function SplitTool() {
     setIsLoadingFile(true);
     setFile(f);
     setResult(null);
+    setIsDownloaded(false);
     setThumbnails([]);
-    setPdfProxy(null);
-    setPdfDoc(null);
     setSelectedPages(new Set());
     setRangeStr('');
-    setRangeError(null);
 
     try {
       const buffer = await readFileAsArrayBuffer(f);
-      const doc = await PDFDocument.load(buffer);
-      setPdfDoc(doc);
-      setTotalPages(doc.getPageCount());
-
       const loadingTask = pdfjs.getDocument({ data: buffer.slice(0) });
       const pdf = await loadingTask.promise;
-      setPdfProxy(pdf);
-      
+      setPdfDoc(pdf);
+      setTotalPages(pdf.numPages);
+
       const thumbs: string[] = [];
-      const numToThumbnail = Math.min(24, pdf.numPages);
+      const numToPreview = pdf.numPages;
       
-      for (let i = 1; i <= numToThumbnail; i++) {
+      for (let i = 1; i <= numToPreview; i++) {
         const page = await pdf.getPage(i);
         const viewport = page.getViewport({ scale: 0.3 });
         const canvas = document.createElement('canvas');
@@ -115,6 +107,34 @@ export default function SplitTool() {
     }
   };
 
+  const validateRange = (str: string, total: number) => {
+    if (!str.trim()) return null;
+    const parts = str.split(',').map(p => p.trim());
+    for (const part of parts) {
+      if (!part) continue;
+      if (part.includes('-')) {
+        const [start, end] = part.split('-').map(Number);
+        if (isNaN(start) || isNaN(end) || start < 1 || end > total || start > end) {
+          return `Invalid range: ${part}`;
+        }
+      } else {
+        const num = Number(part);
+        if (isNaN(num) || num < 1 || num > total) {
+          return `Invalid page: ${part}`;
+        }
+      }
+    }
+    return null;
+  };
+
+  useEffect(() => {
+    if (splitMode === 'range') {
+      setRangeError(validateRange(rangeStr, totalPages));
+    } else {
+      setRangeError(null);
+    }
+  }, [rangeStr, splitMode, totalPages]);
+
   const togglePageSelection = (index: number) => {
     const next = new Set(selectedPages);
     if (next.has(index)) {
@@ -131,13 +151,13 @@ export default function SplitTool() {
       return;
     }
     
-    if (!pdfProxy) return;
+    if (!pdfDoc) return;
     setViewerImage(thumbnails[index] || '');
     setHighResViewerImage(null);
     setIsRenderingViewer(true);
 
     try {
-      const page = await pdfProxy.getPage(index + 1);
+      const page = await pdfDoc.getPage(index + 1);
       const viewport = page.getViewport({ scale: 2.0 });
       const canvas = document.createElement('canvas');
       const context = canvas.getContext('2d');
@@ -148,102 +168,77 @@ export default function SplitTool() {
         setHighResViewerImage(canvas.toDataURL('image/jpeg', 0.9));
       }
     } catch (e) {
-      console.error('Thumbnail generation failed:', e);
+      console.error('High-res render failed:', e);
     } finally {
       setIsRenderingViewer(false);
     }
   };
 
-  const validateRange = (str: string): number[] => {
-    const pages: number[] = [];
-    const ranges = str.split(',').map(r => r.trim()).filter(Boolean);
-    
-    for (const range of ranges) {
-      if (range.includes('-')) {
-        const [start, end] = range.split('-').map(Number);
-        if (isNaN(start) || isNaN(end) || start <= 0 || end > totalPages || start > end) {
-          throw new Error(`Invalid range: ${range}`);
-        }
-        for (let i = start; i <= end; i++) pages.push(i - 1);
-      } else {
-        const val = Number(range);
-        if (isNaN(val) || val <= 0 || val > totalPages) {
-          throw new Error(`Invalid page number: ${range}`);
-        }
-        pages.push(val - 1);
-      }
-    }
-    return Array.from(new Set(pages)).sort((a, b) => a - b);
-  };
-
-  useEffect(() => {
-    if (splitMode === 'range' && rangeStr) {
-      try {
-        validateRange(rangeStr);
-        setRangeError(null);
-      } catch (e: any) {
-        setRangeError(e.message);
-      }
-    } else {
-      setRangeError(null);
-    }
-  }, [rangeStr, splitMode]);
-
   const processSplit = async () => {
     if (!file || !pdfDoc) return;
     setIsSplitting(true);
+    setProgress(0);
+    setProcessingStage('Reading Original PDF...');
 
     try {
-      if (splitMode === 'all') {
-        const zip = new JSZip();
-        for (let i = 0; i < totalPages; i++) {
-          const newDoc = await PDFDocument.create();
-          const [page] = await newDoc.copyPages(pdfDoc, [i]);
-          newDoc.addPage(page);
-          const bytes = await newDoc.save();
-          zip.file(`${file.name.replace('.pdf', '')}_p${i + 1}.pdf`, bytes);
-        }
-        const content = await zip.generateAsync({ type: 'blob' });
-        const url = URL.createObjectURL(content);
-        setResult({ url, size: content.size, isZip: true, name: `split_${file.name.replace('.pdf', '')}.zip` });
-      } else if (splitMode === 'range') {
-        let indices: number[];
-        try {
-          indices = validateRange(rangeStr);
-          if (indices.length === 0) throw new Error('No pages defined');
-        } catch (e: any) {
-          alert(e.message);
-          setIsSplitting(false);
-          return;
-        }
+      const buffer = await readFileAsArrayBuffer(file);
+      const sourcePdf = await PDFDocument.load(buffer);
+      const outPdf = await PDFDocument.create();
 
-        const newDoc = await PDFDocument.create();
-        const copied = await newDoc.copyPages(pdfDoc, indices);
-        copied.forEach(p => newDoc.addPage(p));
-        const bytes = await newDoc.save();
-        const blob = new Blob([bytes], { type: 'application/pdf' });
-        const url = URL.createObjectURL(blob);
-        setResult({ url, size: blob.size, isZip: false, name: `extracted_${file.name}` });
-      } else if (splitMode === 'extract') {
-        if (selectedPages.size === 0) {
-          alert('Please select at least one page.');
-          setIsSplitting(false);
-          return;
+      let pagesToInclude: number[] = [];
+      if (splitMode === 'all') {
+        pagesToInclude = Array.from({ length: totalPages }, (_, i) => i + 1);
+      } else if (splitMode === 'range') {
+        const parts = rangeStr.split(',').map(p => p.trim());
+        for (const part of parts) {
+          if (!part) continue;
+          if (part.includes('-')) {
+            const [start, end] = part.split('-').map(Number);
+            for (let i = start; i <= end; i++) pagesToInclude.push(i);
+          } else {
+            pagesToInclude.push(Number(part));
+          }
         }
-        const indices = Array.from(selectedPages).sort((a, b) => a - b);
-        const newDoc = await PDFDocument.create();
-        const copied = await newDoc.copyPages(pdfDoc, indices);
-        copied.forEach(p => newDoc.addPage(p));
-        const bytes = await newDoc.save();
-        const blob = new Blob([bytes], { type: 'application/pdf' });
-        const url = URL.createObjectURL(blob);
-        setResult({ url, size: blob.size, isZip: false, name: `selected_${file.name}` });
+      } else {
+        pagesToInclude = Array.from(selectedPages).sort((a, b) => a - b).map(idx => idx + 1);
       }
-    } catch (error) {
-      console.error('Split error:', error);
+
+      // De-duplicate and sort
+      pagesToInclude = Array.from(new Set(pagesToInclude)).sort((a, b) => a - b);
+
+      if (pagesToInclude.length === 0) {
+        alert('Please specify at least one page to split.');
+        setIsSplitting(false);
+        return;
+      }
+
+      setProcessingStage(`Extracting ${pagesToInclude.length} pages...`);
+      const copiedPages = await outPdf.copyPages(sourcePdf, pagesToInclude.map(p => p - 1));
+      copiedPages.forEach(p => outPdf.addPage(p));
+
+      setProcessingStage('Finalizing...');
+      setProgress(100);
+      const pdfBytes = await outPdf.save();
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      setResult({ url, size: blob.size });
+    } catch (e) {
+      console.error('Split failed:', e);
+      alert('Failed to split PDF. Please check the file.');
     } finally {
       setIsSplitting(false);
+      setProgress(0);
+      setProcessingStage('');
     }
+  };
+
+  const handleDownload = () => {
+    if (!result) return;
+    const link = document.createElement('a');
+    link.href = result.url;
+    link.download = `split_${file?.name}`;
+    link.click();
+    setIsDownloaded(true);
   };
 
   return (
@@ -265,225 +260,253 @@ export default function SplitTool() {
         ].filter(Boolean)}
       />
 
-       {result ? (
-        <DownloadResult 
-          filename={result.name}
-          size={result.size}
-          onDownload={() => { const link = document.createElement('a'); link.href = result.url; link.download = result.name; link.click(); }}
-          onReset={() => { setFile(null); setPdfDoc(null); setResult(null); setThumbnails([]); setSelectedPages(new Set()); setRangeStr(''); }}
-        />
-       ) : !file ? (
-        <Dropzone onFilesSelected={handleFiles} isProcessing={isLoadingFile} label="Split PDF Document" />
-       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-           <div className="lg:col-span-8 space-y-8">
-              <div className="flex items-center justify-between px-2">
-                 <div className="space-y-1">
-                    <h1 className="text-2xl font-black flex items-center gap-3">
-                      Split PDF Pages
-                    </h1>
-                    <p className="text-xs font-bold uppercase tracking-widest text-neutral-400">Divide a PDF into separate files or extract specific pages easily.</p>
-                 </div>
-                 <label className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl transition-all shadow-lg shadow-blue-500/20 cursor-pointer active:scale-95 text-sm uppercase italic tracking-tighter">
-                    <Plus className="w-4 h-4" />
-                    ADD
-                    <input type="file" className="hidden" accept=".pdf" onChange={(e) => e.target.files && handleFiles(Array.from(e.target.files))} />
-                  </label>
-              </div>
+      <AnimatePresence mode="wait">
+        {result && (
+          <DownloadResult 
+            filename={`split_${file?.name}`}
+            size={result.size}
+            onDownload={handleDownload}
+            isDownloaded={isDownloaded}
+            onBack={() => setResult(null)}
+            onReset={() => { setFile(null); setPdfDoc(null); setResult(null); setIsDownloaded(false); setThumbnails([]); setSelectedPages(new Set()); setRangeStr(''); }}
+          />
+        )}
+      </AnimatePresence>
 
-              <div className="bg-white dark:bg-neutral-900 rounded-[40px] border border-neutral-200 dark:border-neutral-800 p-8 shadow-sm">
-                <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-3">
-                    <LayoutGrid className="w-5 h-5 text-blue-600" />
-                    <h3 className="text-xs font-black uppercase tracking-widest text-neutral-400">
-                      {splitMode === 'extract' ? 'Select Thumbnails' : 'Page Structure'}
-                    </h3>
+       {!file ? (
+         <Dropzone onFilesSelected={handleFiles} maxFiles={10} isProcessing={isLoadingFile} label="Split PDF Document" />
+        ) : (
+          <div className="space-y-8">
+            {/* Header section */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 px-2">
+              <div className="space-y-2">
+                <h1 className="text-3xl font-black flex items-center gap-3">
+                  Split PDF Pages
+                </h1>
+                <p className="text-sm font-bold uppercase tracking-widest text-neutral-400">Divide a PDF into separate files or extract specific pages easily.</p>
+              </div>
+              <label className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl transition-all shadow-lg shadow-blue-500/20 cursor-pointer active:scale-95 text-sm uppercase italic tracking-tighter shrink-0">
+                <Plus className="w-5 h-5" />
+                ADD MORE
+                <input type="file" className="hidden" accept=".pdf" onChange={(e) => e.target.files && handleFiles(Array.from(e.target.files))} />
+              </label>
+            </div>
+
+            {/* Strategy & Options Section - Now Full Width at Top */}
+            <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[40px] p-8 shadow-xl shadow-black/5 space-y-8">
+              <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+                {/* File Preview & Mode Selector */}
+                <div className="xl:col-span-8 space-y-8">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 text-blue-600">
+                      <Settings2 className="w-5 h-5" />
+                      <h3 className="text-xs font-black tracking-widest uppercase">Select Split Strategy</h3>
+                    </div>
+                    <div className="flex items-center gap-3 px-4 py-2 bg-neutral-50 dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700">
+                      <div className="w-8 aspect-[1/1.414] bg-white dark:bg-neutral-900 rounded border border-neutral-200 dark:border-neutral-700 flex items-center justify-center">
+                        <FileText className="w-4 h-4 text-blue-600/50" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-black uppercase text-neutral-900 dark:text-white truncate max-w-[150px]">{file.name}</p>
+                        <p className="text-[8px] font-bold text-neutral-400 uppercase">{formatBytes(file.size)} • {totalPages} Pages</p>
+                      </div>
+                    </div>
                   </div>
-                  {splitMode === 'extract' && (
-                    <span className="text-[10px] font-black uppercase text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">
-                      {selectedPages.size} Selected / {totalPages} Total
-                    </span>
-                  )}
-                </div>
-                
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                  {thumbnails.map((p, i) => (
-                    <motion.div 
-                      key={i} 
-                      layout
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => handleViewPage(i)} 
-                      className={cn(
-                        "group relative aspect-[3/4] bg-neutral-50 dark:bg-neutral-800 rounded-2xl overflow-hidden border transition-all shadow-sm hover:shadow-md",
-                        splitMode !== 'extract' ? "border-neutral-200 dark:border-neutral-700 cursor-zoom-in" : 
-                        selectedPages.has(i) ? "border-blue-600 ring-2 ring-blue-500/20 shadow-md cursor-pointer" : "border-neutral-100 dark:border-neutral-800 opacity-60 hover:opacity-100 cursor-pointer"
-                      )}
-                    >
-                      <img src={p} className="w-full h-full object-cover" alt={`Page ${i+1}`} />
-                      
-                      <div className="absolute top-2 left-2 px-2 py-1 bg-white/90 dark:bg-black/90 backdrop-blur shadow-sm rounded-lg text-[10px] font-black text-neutral-600 dark:text-neutral-400">
-                        P{i+1}
-                      </div>
 
-                      {splitMode === 'extract' && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {[
+                      { id: 'all', label: 'Split into files', icon: <Layers className="w-4 h-4" />, sub: 'Each page as separate PDF' },
+                      { id: 'range', label: 'Custom Range', icon: <Scissors className="w-4 h-4" />, sub: 'e.g. 1-5, 10, 15-20' },
+                      { id: 'extract', label: 'Extract Selected', icon: <LayoutGrid className="w-4 h-4" />, sub: 'Select pages from grid' }
+                    ].map((mode) => (
+                      <button
+                        key={mode.id}
+                        onClick={() => setSplitMode(mode.id as SplitMode)}
+                        className={cn(
+                          "group flex items-center gap-3 px-4 py-4 rounded-2xl border-2 transition-all text-left w-full",
+                          splitMode === mode.id 
+                            ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20" 
+                            : "bg-white dark:bg-neutral-900 border-neutral-100 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-700"
+                        )}
+                      >
                         <div className={cn(
-                          "absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center transition-all",
-                          selectedPages.has(i) ? "bg-blue-600 text-white" : "bg-black/20 text-white/0 border border-white/20"
+                          "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
+                          splitMode === mode.id ? "bg-white/20" : "bg-neutral-100 dark:bg-neutral-800 group-hover:bg-neutral-200"
                         )}>
-                          <Check className="w-3.5 h-3.5" />
+                          {React.cloneElement(mode.icon as React.ReactElement, { className: "w-5 h-5" })}
                         </div>
-                      )}
-                      
-                      {splitMode !== 'extract' && (
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
-                      )}
-                    </motion.div>
-                  ))}
-                  {totalPages > thumbnails.length && (
-                    <div className="aspect-[3/4] flex flex-col items-center justify-center bg-neutral-50 dark:bg-neutral-800 rounded-2xl border border-dashed border-neutral-200 dark:border-neutral-700 p-4 text-center">
-                      <FileBox className="w-6 h-6 text-neutral-300 mb-2" />
-                      <p className="text-[10px] font-black uppercase text-neutral-400 leading-tight">
-                        +{totalPages - thumbnails.length} More Pages
-                      </p>
-                    </div>
-                  )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] font-black uppercase tracking-tight leading-none mb-1">{mode.label}</p>
+                          <p className={cn(
+                            "text-[8px] font-bold uppercase tracking-widest",
+                            splitMode === mode.id ? "text-blue-100" : "text-neutral-400"
+                          )}>{mode.sub}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  <AnimatePresence mode="wait">
+                    {splitMode === 'range' && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="space-y-3"
+                      >
+                        <div className="flex items-center justify-between">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Page Range</label>
+                          {rangeError && (
+                            <div className="flex items-center gap-1 text-[8px] font-black uppercase text-red-500">
+                              <AlertCircle className="w-3 h-3" />
+                              {rangeError}
+                            </div>
+                          )}
+                        </div>
+                        <input 
+                          type="text" 
+                          placeholder="e.g. 1-5, 8, 12-15"
+                          value={rangeStr} 
+                          onChange={(e) => setRangeStr(e.target.value)} 
+                          className={cn(
+                            "w-full px-6 py-4 bg-neutral-50 dark:bg-neutral-800 rounded-2xl border-2 font-black text-xl transition-all",
+                            rangeError ? "border-red-500/50 text-red-600" : "border-transparent focus:border-blue-500"
+                          )}
+                        />
+                        <p className="text-[10px] font-bold text-neutral-500 italic">
+                          Separate ranges with commas. Available pages: 1 to {totalPages}
+                        </p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
-              </div>
-           </div>
 
-           <ImageViewer 
-             src={highResViewerImage || viewerImage || ''} 
-             isOpen={!!viewerImage} 
-             onClose={() => { setViewerImage(null); setHighResViewerImage(null); }} 
-             loading={isRenderingViewer}
-           />
-
-           <div className="lg:col-span-4 space-y-6">
-              <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[32px] p-8 shadow-xl shadow-black/5 space-y-8 sticky top-8">
-                 <div className="space-y-6">
-                    <div className="flex items-center gap-2 text-blue-600">
-                      <Settings2 className="w-4 h-4" />
-                      <h3 className="text-[10px] font-black tracking-widest uppercase">Split Strategy</h3>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-2">
-                       {[
-                         { id: 'all', label: 'Split into files', icon: <Layers className="w-4 h-4" />, sub: 'Each page as separate PDF' },
-                         { id: 'range', label: 'Custom Range', icon: <Scissors className="w-4 h-4" />, sub: 'e.g. 1-5, 10, 15-20' },
-                         { id: 'extract', label: 'Extract Selected', icon: <LayoutGrid className="w-4 h-4" />, sub: 'Select pages from grid' }
-                       ].map((mode) => (
-                         <button
-                           key={mode.id}
-                           onClick={() => setSplitMode(mode.id as SplitMode)}
-                           className={cn(
-                             "group flex items-center gap-3 px-4 py-4 rounded-xl border-2 transition-all text-left w-full",
-                             splitMode === mode.id 
-                               ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20" 
-                               : "bg-white dark:bg-neutral-900 border-neutral-100 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-700 shadow-sm"
-                           )}
-                         >
-                           <div className={cn(
-                             "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
-                             splitMode === mode.id ? "bg-white/20" : "bg-neutral-100 dark:bg-neutral-800 group-hover:bg-neutral-200"
-                           )}>
-                             {React.cloneElement(mode.icon as React.ReactElement, { className: "w-5 h-5 transition-transform group-hover:scale-110" })}
-                           </div>
-                           <div className="flex-1 min-w-0">
-                             <p className="text-[10px] font-black uppercase tracking-tight leading-none mb-1">{mode.label}</p>
-                             <p className={cn(
-                               "text-[8px] font-bold uppercase tracking-widest transition-colors",
-                               splitMode === mode.id ? "text-blue-100" : "text-neutral-400"
-                             )}>{mode.sub}</p>
-                           </div>
-                         </button>
-                       ))}
-                    </div>
-
-                    <AnimatePresence mode="wait">
-                      {splitMode === 'range' && (
-                        <motion.div 
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          exit={{ opacity: 0, height: 0 }}
-                          className="space-y-3 overflow-hidden"
-                        >
-                          <div className="flex items-center justify-between">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Page Range</label>
-                            {rangeError && (
-                              <div className="flex items-center gap-1 text-[8px] font-black uppercase text-red-500">
-                                <AlertCircle className="w-3 h-3" />
-                                {rangeError}
-                              </div>
-                            )}
-                          </div>
-                          <input 
-                            type="text" 
-                            placeholder="e.g. 1-5, 8, 12-15"
-                            value={rangeStr} 
-                            onChange={(e) => setRangeStr(e.target.value)} 
-                            className={cn(
-                              "w-full px-4 py-4 bg-neutral-50 dark:bg-neutral-800 rounded-xl border-2 font-black text-lg transition-all shadow-inner",
-                              rangeError ? "border-red-500/50" : "border-transparent focus:border-blue-500"
-                            )}
+                {/* Finalizing Action Area */}
+                <div className="xl:col-span-4 border-t xl:border-t-0 xl:border-l border-neutral-100 dark:border-neutral-800 pt-8 xl:pt-0 xl:pl-8 flex flex-col justify-center">
+                  <div className="space-y-6">
+                    {isSplitting && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-black uppercase text-blue-600 tracking-widest">{processingStage}</span>
+                          <span className="text-[10px] font-black text-blue-600">{progress}%</span>
+                        </div>
+                        <div className="h-2 w-full bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+                          <motion.div 
+                            initial={{ width: 0 }}
+                            animate={{ width: `${progress}%` }}
+                            className="h-full bg-blue-600"
                           />
-                          <p className="text-[9px] font-bold text-neutral-500 bg-neutral-50 dark:bg-neutral-800/50 p-2 rounded-lg italic border border-neutral-100 dark:border-neutral-800">
-                            Separate ranges with commas. Max page: {totalPages}
-                          </p>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-
-                    <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800">
-                      <div className="flex items-center justify-between mb-4">
-                        <p className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">Document Info</p>
-                        <span className="text-[10px] font-black uppercase text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-full">
-                          {totalPages} Total Pages
-                        </span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                         <div className="w-10 h-10 rounded-lg bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 flex items-center justify-center text-blue-600">
-                            <FileText className="w-5 h-5" />
-                         </div>
-                         <div className="flex-1 min-w-0">
-                           <p className="text-[10px] font-black text-neutral-900 dark:text-white truncate">{file.name}</p>
-                           <p className="text-[8px] font-bold text-neutral-400 uppercase tracking-widest">{formatBytes(file.size)}</p>
-                         </div>
-                      </div>
-                    </div>
-                 </div>
-
-                 <div className="pt-6">
+                    )}
                     <button 
                       onClick={processSplit}
                       disabled={isSplitting || (splitMode === 'range' && (!!rangeError || !rangeStr)) || (splitMode === 'extract' && selectedPages.size === 0)}
-                      className="w-full py-5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl shadow-xl shadow-blue-500/20 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                      className="w-full py-6 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-[24px] shadow-2xl shadow-blue-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed group"
                     >
-                      {isSplitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Scissors className="w-5 h-5" />}
-                      {isSplitting ? 'PROCESSING...' : splitMode === 'range' || splitMode === 'extract' ? 'GENERATE PDF' : 'SPLIT ALL PAGES'}
+                      {isSplitting ? <Loader2 className="w-6 h-6 animate-spin" /> : <Scissors className="w-6 h-6 transition-transform group-hover:rotate-12" />}
+                      <span className="text-lg tracking-tight">
+                        {isSplitting ? 'PROCESSING...' : splitMode === 'range' || splitMode === 'extract' ? 'GENERATE PDF' : 'SPLIT ALL PAGES'}
+                      </span>
                     </button>
-                    <div className="mt-4 flex items-center justify-center gap-2 text-[8px] font-black uppercase text-neutral-400 tracking-[0.2em]">
-                       <Shield className="w-3 h-3" />
-                       Privacy-First Logic
+                    <div className="flex items-center justify-center gap-6">
+                      <div className="flex items-center gap-2 text-[8px] font-black uppercase text-neutral-400 tracking-[0.2em]">
+                        <Shield className="w-3 h-3" />
+                        In-Browser
+                      </div>
+                      <div className="flex items-center gap-2 text-[8px] font-black uppercase text-neutral-400 tracking-[0.2em]">
+                        <Check className="w-3 h-3 text-green-500" />
+                        Private
+                      </div>
                     </div>
-                 </div>
+                  </div>
+                </div>
               </div>
-           </div>
-        </div>
-       )}
-       <ToolContent 
-         toolId={tool.id}
-        toolName="Split PDF"
-        toolType="Split"
-        description="Extract specific pages, split giant documents into separate files, or select pages visually from thumbnails. Everything runs in-browser for complete data security."
-        longContent={TOOL_SEO_CONTENT.split}
-      />
+            </div>
 
-      <NavigationConfirmModal 
-        isOpen={blocker.state === 'blocked'}
-        onConfirm={() => blocker.proceed?.()}
-        onCancel={() => blocker.reset?.()}
-      />
+            {/* Thumbnails Grid Section */}
+            <div className="bg-white dark:bg-neutral-900 rounded-[40px] border border-neutral-200 dark:border-neutral-800 p-8 shadow-sm">
+              <div className="flex items-center justify-between mb-8 px-2">
+                <div className="flex items-center gap-3">
+                  <LayoutGrid className="w-5 h-5 text-blue-600" />
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">
+                    {splitMode === 'extract' ? 'Select extraction targets' : 'Document Page Insights'}
+                  </h3>
+                </div>
+                {splitMode === 'extract' && (
+                  <span className="text-[10px] font-black uppercase text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded-full border border-blue-100 dark:border-blue-800">
+                    {selectedPages.size} Selected / {totalPages} Total
+                  </span>
+                )}
+              </div>
+              
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+                {thumbnails.map((p, i) => (
+                  <motion.div 
+                    key={i} 
+                    layout
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => handleViewPage(i)} 
+                    className={cn(
+                      "group relative aspect-[3/4] bg-neutral-50 dark:bg-neutral-800 rounded-2xl overflow-hidden border transition-all shadow-sm hover:shadow-xl",
+                      splitMode !== 'extract' ? "border-neutral-200 dark:border-neutral-700 cursor-zoom-in" : 
+                      selectedPages.has(i) ? "border-blue-600 ring-4 ring-blue-500/10 shadow-blue-500/20 cursor-pointer" : "border-neutral-100 dark:border-neutral-800 opacity-60 hover:opacity-100 cursor-pointer"
+                    )}
+                  >
+                    <img src={p} className="w-full h-full object-cover" alt={`Page ${i+1}`} />
+                    
+                    <div className="absolute top-3 left-3 px-2 py-1 bg-white/95 dark:bg-black/95 backdrop-blur shadow-[0_2px_10px_rgba(0,0,0,0.1)] rounded-lg text-[10px] font-black text-neutral-600 dark:text-neutral-400 border border-neutral-100 dark:border-neutral-800">
+                      P{i+1}
+                    </div>
+
+                    {splitMode === 'extract' && (
+                      <div className={cn(
+                        "absolute top-3 right-3 w-7 h-7 rounded-full flex items-center justify-center transition-all shadow-md",
+                        selectedPages.has(i) ? "bg-blue-600 text-white scale-110" : "bg-black/20 text-white/0 border border-white/20 hover:bg-black/40"
+                      )}>
+                        <Check className="w-4 h-4" />
+                      </div>
+                    )}
+
+                    <div className="absolute inset-0 bg-blue-600/0 group-hover:bg-blue-600/5 transition-colors pointer-events-none" />
+                  </motion.div>
+                ))}
+                {totalPages > thumbnails.length && (
+                  <div className="aspect-[3/4] flex flex-col items-center justify-center bg-neutral-50 dark:bg-neutral-800 rounded-2xl border border-dashed border-neutral-300 dark:border-neutral-700 p-6 text-center">
+                    <div className="w-12 h-12 rounded-full bg-neutral-100 dark:bg-neutral-900 flex items-center justify-center mb-4">
+                      <FileBox className="w-6 h-6 text-neutral-300" />
+                    </div>
+                    <p className="text-[10px] font-black uppercase text-neutral-400 tracking-widest leading-loose">
+                      +{totalPages - thumbnails.length}<br/>Remaining
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <ImageViewer 
+              src={highResViewerImage || viewerImage || ''} 
+              isOpen={!!viewerImage} 
+              onClose={() => { setViewerImage(null); setHighResViewerImage(null); }} 
+              loading={isRenderingViewer}
+            />
+          </div>
+        )}
+
+        <ToolContent 
+          toolId={tool.id}
+          toolName="Split PDF"
+          toolType="Split"
+          description="Extract specific pages, split giant documents into separate files, or select pages visually from thumbnails. Everything runs in-browser for complete data security."
+          longContent={TOOL_SEO_CONTENT.split}
+        />
+
+        <NavigationConfirmModal 
+          isOpen={blocker.state === 'blocked'}
+          onConfirm={() => blocker.proceed?.()}
+          onCancel={() => blocker.reset?.()}
+        />
     </div>
   );
 }

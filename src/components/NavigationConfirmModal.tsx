@@ -19,11 +19,11 @@ export const NavigationConfirmModal: React.FC<NavigationConfirmModalProps> = ({ 
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onCancel}
-            className="fixed inset-0 bg-neutral-900/40 backdrop-blur-[2px] z-[9999]"
+            className="fixed inset-0 bg-neutral-900/40 backdrop-blur-[2px] z-[9999] h-[100dvh]"
           />
           
           {/* Modal Container */}
-          <div className="fixed inset-0 pointer-events-none z-[10000] flex items-center justify-center p-4">
+          <div className="fixed inset-0 pointer-events-none z-[10000] flex items-center justify-center p-4 h-[100dvh]">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
