@@ -12,7 +12,7 @@ import {
   Wand2,
   FileText, 
   Plus, 
-  Settings2,
+  Pencil,
   Combine, 
   Shield, 
   Maximize, 
@@ -45,12 +45,14 @@ interface FileData {
 }
 
 export default function MergeTool() {
+  const MAX_FILES = 20;
   const tool = TOOLS.find(t => t.id === 'merge')!;
   const [files, setFiles] = useState<FileData[]>([]);
   const [isMerging, setIsMerging] = useState(false);
   const [isAddingFiles, setIsAddingFiles] = useState(false);
   const [progress, setProgress] = useState(0);
   const [processingStage, setProcessingStage] = useState('');
+  const [showOptions, setShowOptions] = useState(false);
   const [result, setResult] = useState<{ url: string; size: number } | null>(null);
   const [isDownloaded, setIsDownloaded] = useState(false);
 
@@ -61,10 +63,22 @@ export default function MergeTool() {
   const blocker = useFileExitConfirm({ isDirty: files.length > 0 && !result });
 
   const handleFiles = async (newFiles: File[]) => {
+    if (files.length >= MAX_FILES) {
+      alert(`Limit reached: Maximum of ${MAX_FILES} files allowed for secure browser merging.`);
+      return;
+    }
+
+    const remainingSlots = MAX_FILES - files.length;
+    const filesToProcess = newFiles.slice(0, remainingSlots);
+
+    if (newFiles.length > remainingSlots) {
+      alert(`Batch limit: Only the first ${remainingSlots} files were added. (Max: ${MAX_FILES} per operation)`);
+    }
+
     setIsAddingFiles(true);
     
     // Create pending items
-    const pending: FileData[] = newFiles.map(f => ({
+    const pending: FileData[] = filesToProcess.map(f => ({
       id: `f-${Math.random().toString(36).substr(2, 9)}`,
       file: f,
       size: f.size,
@@ -190,7 +204,7 @@ export default function MergeTool() {
             onDownload={handleDownload} 
             isDownloaded={isDownloaded}
             onBack={() => setResult(null)}
-            onReset={() => { setFiles([]); setResult(null); setIsDownloaded(false); }} 
+            onReset={() => { setFiles([]); setResult(null); setIsDownloaded(false); setShowOptions(false); }} 
           />
         )}
       </AnimatePresence>
@@ -198,7 +212,7 @@ export default function MergeTool() {
       {files.length === 0 ? (
         <Dropzone 
           onFilesSelected={handleFiles} 
-          maxFiles={10} 
+          maxFiles={MAX_FILES} 
           isProcessing={isAddingFiles}
           label="Select PDF Documents" 
         />
@@ -212,97 +226,122 @@ export default function MergeTool() {
                 </h1>
                 <p className="text-sm font-bold uppercase tracking-widest text-neutral-400">Combine multiple PDFs into a single document in seconds.</p>
               </div>
-              <label className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl transition-all shadow-lg shadow-blue-500/20 cursor-pointer active:scale-95 text-sm uppercase italic tracking-tighter shrink-0">
-                <Plus className="w-5 h-5" />
-                ADD MORE
-                <input type="file" multiple className="hidden" accept="application/pdf" onChange={(e) => e.target.files && handleFiles(Array.from(e.target.files))} />
-              </label>
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => setShowOptions(!showOptions)}
+                  className={cn(
+                    "flex items-center justify-center gap-2 px-6 py-3 rounded-2xl border-2 transition-all shadow-md active:scale-95 text-xs font-black uppercase italic tracking-tighter shrink-0",
+                    showOptions 
+                      ? "bg-neutral-100 border-neutral-300 dark:bg-neutral-800 dark:border-neutral-700 text-blue-600" 
+                      : "bg-white border-neutral-200 dark:bg-neutral-900 dark:border-neutral-800 text-neutral-400 hover:border-neutral-300"
+                  )}
+                >
+                  <Pencil className="w-4 h-4" />
+                  {showOptions ? 'HIDE OPTIONS' : 'OPTIONS'}
+                </button>
+                <label className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl transition-all shadow-lg shadow-blue-500/20 cursor-pointer active:scale-95 text-sm uppercase italic tracking-tighter shrink-0">
+                  <Plus className="w-5 h-5" />
+                  ADD MORE
+                  <input type="file" multiple className="hidden" accept="application/pdf" onChange={(e) => e.target.files && handleFiles(Array.from(e.target.files))} />
+                </label>
+              </div>
             </div>
 
-            {/* Merge Options - Wide Section at Top */}
-            <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[40px] p-8 shadow-xl shadow-black/5 space-y-8">
-              <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
-                <div className="xl:col-span-8 space-y-6">
-                  <div className="flex items-center gap-3 text-blue-600">
-                    <Settings2 className="w-5 h-5" />
-                    <h3 className="text-xs font-black tracking-widest uppercase">Merge Options</h3>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <button 
-                      onClick={() => setNormalizeSize(!normalizeSize)}
-                      className={cn(
-                        "flex items-center gap-4 p-5 rounded-2xl border-2 transition-all text-left",
-                        normalizeSize ? "border-blue-600 bg-blue-50/50 dark:bg-blue-900/20 text-blue-600 shadow-sm" : "border-neutral-100 dark:border-neutral-800 text-neutral-400 hover:border-neutral-200"
-                      )}
-                    >
-                      <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-colors", normalizeSize ? "bg-blue-600 text-white" : "bg-neutral-100 dark:bg-neutral-800")}>
-                        <Maximize className="w-5 h-5" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-[10px] font-black uppercase tracking-tight mb-1">Standardize Output</p>
-                        <p className="text-[8px] font-bold opacity-60 uppercase tracking-widest">Auto-resize all pages to A4 format</p>
-                      </div>
-                    </button>
-
-                    <button 
-                      onClick={() => setEnableCompression(!enableCompression)}
-                      className={cn(
-                        "flex items-center gap-4 p-5 rounded-2xl border-2 transition-all text-left",
-                        enableCompression ? "border-purple-600 bg-purple-50/50 dark:bg-purple-900/20 text-purple-600 shadow-sm" : "border-neutral-100 dark:border-neutral-800 text-neutral-400 hover:border-neutral-200"
-                      )}
-                    >
-                      <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-colors", enableCompression ? "bg-purple-600 text-white" : "bg-neutral-100 dark:bg-neutral-800")}>
-                        <Zap className="w-5 h-5" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-[10px] font-black uppercase tracking-tight mb-1">Smart Optimization</p>
-                        <p className="text-[8px] font-bold opacity-60 uppercase tracking-widest">Rebuild object streams for smaller size</p>
-                      </div>
-                    </button>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-6 px-4 py-3 bg-neutral-50 dark:bg-neutral-800/50 rounded-2xl border border-neutral-100 dark:border-neutral-800">
-                    <div className="flex items-center gap-2">
-                       <span className="text-[10px] font-black uppercase text-neutral-400">Queue:</span>
-                       <span className="text-[10px] font-black text-neutral-900 dark:text-white uppercase tracking-tighter">{files.length} Files</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                       <span className="text-[10px] font-black uppercase text-neutral-400">Total Size:</span>
-                       <span className="text-[10px] font-black text-blue-600 italic">{formatBytes(files.reduce((a, b) => a + b.size, 0))}</span>
-                    </div>
-                    <div className="flex items-center gap-2 ml-auto">
-                       <span className="text-[8px] font-black uppercase text-neutral-400 italic">Local Processing Only</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="xl:col-span-4 border-t xl:border-t-0 xl:border-l border-neutral-100 dark:border-neutral-800 pt-8 xl:pt-0 xl:pl-8 flex flex-col justify-center">
-                  <div className="space-y-6">
-                    {isMerging && (
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-black uppercase text-blue-600 tracking-widest">{processingStage}</span>
-                          <span className="text-[10px] font-black text-blue-600">{progress}%</span>
+            <AnimatePresence>
+              {showOptions && (
+                <motion.div 
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden"
+                >
+                  {/* Merge Options - Wide Section at Top */}
+                  <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[40px] p-8 shadow-xl shadow-black/5 space-y-8 mb-8">
+                    <div className="grid grid-cols-1 gap-8 items-start">
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-3 text-blue-600">
+                          <Pencil className="w-5 h-5" />
+                          <h3 className="text-xs font-black tracking-widest uppercase">Merge Options</h3>
                         </div>
-                        <div className="h-2 w-full bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
-                          <motion.div initial={{ width: 0 }} animate={{ width: `${progress}%` }} className="h-full bg-blue-600" />
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <button 
+                            onClick={() => setNormalizeSize(!normalizeSize)}
+                            className={cn(
+                              "flex items-center gap-4 p-5 rounded-2xl border-2 transition-all text-left",
+                              normalizeSize ? "border-blue-600 bg-blue-50/50 dark:bg-blue-900/20 text-blue-600 shadow-sm" : "border-neutral-100 dark:border-neutral-800 text-neutral-400 hover:border-neutral-200"
+                            )}
+                          >
+                            <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-colors", normalizeSize ? "bg-blue-600 text-white" : "bg-neutral-100 dark:bg-neutral-800")}>
+                              <Maximize className="w-5 h-5" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-[10px] font-black uppercase tracking-tight mb-1">Standardize Output</p>
+                              <p className="text-[8px] font-bold opacity-60 uppercase tracking-widest">Auto-resize all pages to A4 format</p>
+                            </div>
+                          </button>
+
+                          <button 
+                            onClick={() => setEnableCompression(!enableCompression)}
+                            className={cn(
+                              "flex items-center gap-4 p-5 rounded-2xl border-2 transition-all text-left",
+                              enableCompression ? "border-purple-600 bg-purple-50/50 dark:bg-purple-900/20 text-purple-600 shadow-sm" : "border-neutral-100 dark:border-neutral-800 text-neutral-400 hover:border-neutral-200"
+                            )}
+                          >
+                            <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-colors", enableCompression ? "bg-purple-600 text-white" : "bg-neutral-100 dark:bg-neutral-800")}>
+                              <Zap className="w-5 h-5" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-[10px] font-black uppercase tracking-tight mb-1">Smart Optimization</p>
+                              <p className="text-[8px] font-bold opacity-60 uppercase tracking-widest">Rebuild object streams for smaller size</p>
+                            </div>
+                          </button>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-6 px-4 py-3 bg-neutral-50 dark:bg-neutral-800/50 rounded-2xl border border-neutral-100 dark:border-neutral-800">
+                          <div className="flex items-center gap-2">
+                             <span className="text-[10px] font-black uppercase text-neutral-400">Queue:</span>
+                             <span className="text-[10px] font-black text-neutral-900 dark:text-white uppercase tracking-tighter">{files.length} Files</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                             <span className="text-[10px] font-black uppercase text-neutral-400">Total Size:</span>
+                             <span className="text-[10px] font-black text-blue-600 italic">{formatBytes(files.reduce((a, b) => a + b.size, 0))}</span>
+                          </div>
+                          <div className="flex items-center gap-2 ml-auto">
+                             <span className="text-[8px] font-black uppercase text-neutral-400 italic">Local Processing Only</span>
+                          </div>
                         </div>
                       </div>
-                    )}
-                    <button 
-                      onClick={mergePDFs}
-                      disabled={isMerging || files.length < 2}
-                      className="group w-full py-6 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-black rounded-[24px] shadow-2xl shadow-blue-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
-                    >
-                      {isMerging ? <Loader2 className="w-6 h-6 animate-spin" /> : <Combine className="w-6 h-6 transition-transform group-hover:scale-110" />}
-                      <span className="text-lg tracking-tight uppercase">{isMerging ? 'MERGING...' : 'MERGE PDFS'}</span>
-                    </button>
-                    <div className="flex items-center justify-center gap-2 text-[8px] font-black uppercase text-neutral-400 tracking-[0.2em]">
-                      <ShieldCheck className="w-3.5 h-3.5 text-blue-500" />
-                      Secure Browser Fusion
                     </div>
                   </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[40px] p-8 shadow-xl shadow-black/5">
+              <div className="space-y-6 max-w-2xl mx-auto">
+                {isMerging && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase text-blue-600 tracking-widest">{processingStage}</span>
+                      <span className="text-[10px] font-black text-blue-600">{progress}%</span>
+                    </div>
+                    <div className="h-2 w-full bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${progress}%` }} className="h-full bg-blue-600" />
+                    </div>
+                  </div>
+                )}
+                <button 
+                  onClick={mergePDFs}
+                  disabled={isMerging || files.length < 2}
+                  className="group w-full py-6 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-black rounded-[24px] shadow-2xl shadow-blue-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
+                >
+                  {isMerging ? <Loader2 className="w-6 h-6 animate-spin" /> : <Combine className="w-6 h-6 transition-transform group-hover:scale-110" />}
+                  <span className="text-lg tracking-tight uppercase">{isMerging ? 'MERGING...' : 'MERGE PDFS'}</span>
+                </button>
+                <div className="flex items-center justify-center gap-2 text-[8px] font-black uppercase text-neutral-400 tracking-[0.2em]">
+                  <ShieldCheck className="w-3.5 h-3.5 text-blue-500" />
+                  Secure Browser Fusion
                 </div>
               </div>
             </div>

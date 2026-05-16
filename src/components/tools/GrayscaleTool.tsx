@@ -8,7 +8,7 @@ import {
   Palette, 
   Download, 
   Loader2,
-  Settings2,
+  Pencil,
   FileText,
   Shield,
   LayoutGrid,
@@ -50,6 +50,7 @@ export default function GrayscaleTool() {
   const [thumbnails, setThumbnails] = useState<string[]>([]);
   const [selectedPages, setSelectedPages] = useState<Set<number>>(new Set());
   
+  const [showOptions, setShowOptions] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [processingStage, setProcessingStage] = useState('');
@@ -68,6 +69,7 @@ export default function GrayscaleTool() {
   const handleFiles = async (files: File[]) => {
     if (files.length === 0) return;
     const f = files[0];
+    setProcessingStage('Reading source document...');
     setIsLoadingFile(true);
     setFile(f);
     setResult(null);
@@ -263,13 +265,13 @@ export default function GrayscaleTool() {
             onDownload={handleDownload}
             isDownloaded={isDownloaded}
             onBack={() => setResult(null)}
-            onReset={() => { setFile(null); setPdfProxy(null); setResult(null); setIsDownloaded(false); setThumbnails([]); setSelectedPages(new Set()); }}
+            onReset={() => { setFile(null); setPdfProxy(null); setResult(null); setIsDownloaded(false); setShowOptions(false); setThumbnails([]); setSelectedPages(new Set()); }}
           />
         )}
       </AnimatePresence>
 
        {!file ? (
-         <Dropzone onFilesSelected={handleFiles} maxFiles={10} isProcessing={isLoadingFile} label="Select PDF to Grayscale" />
+         <Dropzone onFilesSelected={handleFiles} maxFiles={1} isProcessing={isLoadingFile} label="Select PDF to Grayscale" />
         ) : (
           <div className="space-y-8">
             {/* Header section */}
@@ -280,111 +282,131 @@ export default function GrayscaleTool() {
                 </h1>
                 <p className="text-sm font-bold uppercase tracking-widest text-neutral-400">Transform color PDF pages into print-friendly monochrome.</p>
               </div>
-              <label className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl transition-all shadow-lg shadow-blue-500/20 cursor-pointer active:scale-95 text-sm uppercase italic tracking-tighter shrink-0">
-                <Plus className="w-5 h-5" />
-                ADD MORE
-                <input type="file" className="hidden" accept=".pdf" onChange={(e) => e.target.files && handleFiles(Array.from(e.target.files))} />
-              </label>
+              <div className="flex items-center gap-3">
+                 <button 
+                  onClick={() => setShowOptions(!showOptions)}
+                  className={cn(
+                    "flex items-center justify-center gap-2 px-6 py-3 rounded-2xl border-2 transition-all shadow-md active:scale-95 text-xs font-black uppercase italic tracking-tighter shrink-0",
+                    showOptions 
+                      ? "bg-neutral-100 border-neutral-300 dark:bg-neutral-800 dark:border-neutral-700 text-blue-600" 
+                      : "bg-white border-neutral-200 dark:bg-neutral-900 dark:border-neutral-800 text-neutral-400 hover:border-neutral-300"
+                  )}
+                >
+                  <Pencil className="w-4 h-4" />
+                  {showOptions ? 'HIDE OPTIONS' : 'OPTIONS'}
+                </button>
+              </div>
             </div>
 
-            {/* Options & Strategy Section - Full Width Top */}
-            <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[40px] p-8 shadow-xl shadow-black/5 space-y-8">
-              <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
-                <div className="xl:col-span-8 space-y-8">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="flex items-center gap-3 text-blue-600">
-                      <Settings2 className="w-5 h-5" />
-                      <h3 className="text-xs font-black tracking-widest uppercase">Grayscale Options</h3>
-                    </div>
-                    <div className="flex items-center gap-3 px-4 py-2 bg-neutral-50 dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700">
-                      <div className="w-8 aspect-[1/1.414] bg-white dark:bg-neutral-900 rounded border border-neutral-200 dark:border-neutral-700 flex items-center justify-center">
-                        <Palette className="w-4 h-4 text-blue-600/50" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-black uppercase text-neutral-900 dark:text-white truncate max-w-[150px]">{file.name}</p>
-                        <p className="text-[8px] font-bold text-neutral-400 uppercase">{formatBytes(file.size)} • {totalPages} Pages</p>
-                      </div>
-                    </div>
-                  </div>
+            <AnimatePresence>
+              {showOptions && (
+                <motion.div 
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden"
+                >
+                  {/* Options & Strategy Section - Full Width Top */}
+                  <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[40px] p-8 shadow-xl shadow-black/5 space-y-8 mb-8">
+                    <div className="grid grid-cols-1 gap-8 items-start">
+                      <div className="space-y-8">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div className="flex items-center gap-3 text-blue-600">
+                            <Pencil className="w-5 h-5" />
+                            <h3 className="text-xs font-black tracking-widest uppercase">Grayscale Options</h3>
+                          </div>
+                          <div className="flex items-center gap-3 px-4 py-2 bg-neutral-50 dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700">
+                            <div className="w-8 aspect-[1/1.414] bg-white dark:bg-neutral-900 rounded border border-neutral-200 dark:border-neutral-700 flex items-center justify-center">
+                              <Palette className="w-4 h-4 text-blue-600/50" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-[10px] font-black uppercase text-neutral-900 dark:text-white truncate max-w-[150px]">{file.name}</p>
+                              <p className="text-[8px] font-bold text-neutral-400 uppercase">{formatBytes(file.size)} • {totalPages} Pages</p>
+                            </div>
+                          </div>
+                        </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                    {[
-                      { id: 'all', label: 'All Pages', icon: <Layers className="w-4 h-4" />, sub: 'Convert document' },
-                      { id: 'selected', label: 'Selected Only', icon: <LayoutGrid className="w-4 h-4" />, sub: 'Specific targets' }
-                    ].map((m) => (
-                      <button 
-                        key={m.id} 
-                        onClick={() => setMode(m.id as any)} 
-                        className={cn(
-                          "group flex items-center gap-3 px-4 py-4 rounded-2xl border-2 transition-all text-left",
-                          mode === m.id 
-                            ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20" 
-                            : "bg-white dark:bg-neutral-900 border-neutral-100 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-700"
-                        )}
-                      >
-                        <div className={cn(
-                          "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
-                          mode === m.id ? "bg-white/20" : "bg-neutral-100 dark:bg-neutral-800"
-                        )}>
-                          {React.cloneElement(m.icon as React.ReactElement, { className: "w-5 h-5" })}
-                        </div>
-                        <div className="flex-1 min-w-0 text-center md:text-left">
-                          <p className="text-[10px] font-black uppercase tracking-tight leading-none mb-1">{m.label}</p>
-                          <p className={cn("text-[8px] font-bold uppercase", mode === m.id ? "text-blue-100" : "text-neutral-400")}>{m.sub}</p>
-                        </div>
-                      </button>
-                    ))}
-                    
-                    <div className="lg:col-span-2 flex items-center gap-2 bg-neutral-50 dark:bg-neutral-800 p-2 rounded-2xl border border-neutral-200 dark:border-neutral-800">
-                      {[
-                        { id: 'grayscale', label: 'Multi-Tone Grayscale' },
-                        { id: 'pure-bw', label: 'Pure Black & White' }
-                      ].map(t => (
-                        <button 
-                          key={t.id} 
-                          onClick={() => setConversionType(t.id as ConversionType)} 
-                          className={cn(
-                            "flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all",
-                            conversionType === t.id 
-                              ? "bg-white dark:bg-neutral-900 text-blue-600 shadow-sm border border-neutral-200 dark:border-neutral-700" 
-                              : "text-neutral-400 hover:text-neutral-600"
-                          )}
-                        >
-                          {t.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="xl:col-span-4 border-t xl:border-t-0 xl:border-l border-neutral-100 dark:border-neutral-800 pt-8 xl:pt-0 xl:pl-8 flex flex-col justify-center">
-                  <div className="space-y-6">
-                    {isProcessing && (
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-black uppercase text-blue-600 tracking-widest">{processingStage}</span>
-                          <span className="text-[10px] font-black text-blue-600">{progress}%</span>
-                        </div>
-                        <div className="h-2 w-full bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
-                          <motion.div initial={{ width: 0 }} animate={{ width: `${progress}%` }} className="h-full bg-blue-600 transition-all duration-300" />
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                          {[
+                            { id: 'all', label: 'All Pages', icon: <Layers className="w-4 h-4" />, sub: 'Convert document' },
+                            { id: 'selected', label: 'Selected Only', icon: <LayoutGrid className="w-4 h-4" />, sub: 'Specific targets' }
+                          ].map((m) => (
+                            <button 
+                              key={m.id} 
+                              onClick={() => setMode(m.id as any)} 
+                              className={cn(
+                                "group flex items-center gap-3 px-4 py-4 rounded-2xl border-2 transition-all text-left",
+                                mode === m.id 
+                                  ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20" 
+                                  : "bg-white dark:bg-neutral-900 border-neutral-100 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-700"
+                              )}
+                            >
+                              <div className={cn(
+                                "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
+                                mode === m.id ? "bg-white/20" : "bg-neutral-100 dark:bg-neutral-800"
+                              )}>
+                                {React.cloneElement(m.icon as React.ReactElement, { className: "w-5 h-5" })}
+                              </div>
+                              <div className="flex-1 min-w-0 text-center md:text-left">
+                                <p className="text-[10px] font-black uppercase tracking-tight leading-none mb-1">{m.label}</p>
+                                <p className={cn("text-[8px] font-bold uppercase", mode === m.id ? "text-blue-100" : "text-neutral-400")}>{m.sub}</p>
+                              </div>
+                            </button>
+                          ))}
+                          
+                          <div className="lg:col-span-2 flex items-center gap-2 bg-neutral-50 dark:bg-neutral-800 p-2 rounded-2xl border border-neutral-200 dark:border-neutral-800">
+                            {[
+                              { id: 'grayscale', label: 'Multi-Tone Grayscale' },
+                              { id: 'pure-bw', label: 'Pure Black & White' }
+                            ].map(t => (
+                              <button 
+                                key={t.id} 
+                                onClick={() => setConversionType(t.id as ConversionType)} 
+                                className={cn(
+                                  "flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all",
+                                  conversionType === t.id 
+                                    ? "bg-white dark:bg-neutral-900 text-blue-600 shadow-sm border border-neutral-200 dark:border-neutral-700" 
+                                    : "text-neutral-400 hover:text-neutral-600"
+                                )}
+                              >
+                                {t.label}
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       </div>
-                    )}
-                    <button 
-                      onClick={processGrayscale} 
-                      disabled={isProcessing || (mode === 'selected' && selectedPages.size === 0)} 
-                      className="w-full py-6 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-[24px] shadow-2xl shadow-blue-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:grayscale group"
-                    >
-                      {isProcessing ? <Loader2 className="w-6 h-6 animate-spin" /> : <Printer className="w-6 h-6 transition-transform group-hover:rotate-12" />}
-                      <span className="text-lg tracking-tight uppercase">
-                        {isProcessing ? 'CONVERTING...' : 'APPLY GRAYSCALE'}
-                      </span>
-                    </button>
-                    <div className="flex items-center justify-center gap-4 text-[8px] font-black uppercase text-neutral-400 tracking-[0.2em]">
-                      <ShieldCheck className="w-3.5 h-3.5 text-blue-500" />
-                      100% Client-Side Encryption
                     </div>
                   </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[40px] p-8 shadow-xl shadow-black/5 not-italic">
+              <div className="space-y-6 max-w-2xl mx-auto">
+                {isProcessing && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase text-blue-600 tracking-widest">{processingStage}</span>
+                      <span className="text-[10px] font-black text-blue-600">{progress}%</span>
+                    </div>
+                    <div className="h-2 w-full bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${progress}%` }} className="h-full bg-blue-600 transition-all duration-300" />
+                    </div>
+                  </div>
+                )}
+                <button 
+                  onClick={processGrayscale} 
+                  disabled={isProcessing || (mode === 'selected' && selectedPages.size === 0)} 
+                  className="w-full py-6 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-[24px] shadow-2xl shadow-blue-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:grayscale group"
+                >
+                  {isProcessing ? <Loader2 className="w-6 h-6 animate-spin" /> : <Printer className="w-6 h-6 transition-transform group-hover:rotate-12" />}
+                  <span className="text-lg tracking-tight uppercase italic">
+                    {isProcessing ? 'COMPILING...' : 'APPLY GRAYSCALE'}
+                  </span>
+                </button>
+                <div className="flex items-center justify-center gap-4 text-[8px] font-black uppercase text-neutral-400 tracking-[0.2em]">
+                  <ShieldCheck className="w-3.5 h-3.5 text-blue-500" />
+                  Local Sandbox Filter
                 </div>
               </div>
             </div>

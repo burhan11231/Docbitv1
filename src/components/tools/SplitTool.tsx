@@ -8,7 +8,7 @@ import {
   Scissors, 
   Download, 
   Loader2,
-  Settings2,
+  Pencil,
   FileText,
   Shield,
   LayoutGrid,
@@ -53,6 +53,7 @@ export default function SplitTool() {
   const [selectedPages, setSelectedPages] = useState<Set<number>>(new Set());
   const [rangeError, setRangeError] = useState<string | null>(null);
   
+  const [showOptions, setShowOptions] = useState(false);
   const [isSplitting, setIsSplitting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [processingStage, setProcessingStage] = useState('');
@@ -68,6 +69,7 @@ export default function SplitTool() {
   const handleFiles = async (files: File[]) => {
     if (files.length === 0) return;
     const f = files[0];
+    setProcessingStage('Reading source document...');
     setIsLoadingFile(true);
     setFile(f);
     setResult(null);
@@ -268,13 +270,13 @@ export default function SplitTool() {
             onDownload={handleDownload}
             isDownloaded={isDownloaded}
             onBack={() => setResult(null)}
-            onReset={() => { setFile(null); setPdfDoc(null); setResult(null); setIsDownloaded(false); setThumbnails([]); setSelectedPages(new Set()); setRangeStr(''); }}
+            onReset={() => { setFile(null); setPdfDoc(null); setResult(null); setIsDownloaded(false); setShowOptions(false); setThumbnails([]); setSelectedPages(new Set()); setRangeStr(''); }}
           />
         )}
       </AnimatePresence>
 
        {!file ? (
-         <Dropzone onFilesSelected={handleFiles} maxFiles={10} isProcessing={isLoadingFile} label="Split PDF Document" />
+         <Dropzone onFilesSelected={handleFiles} maxFiles={1} isProcessing={isLoadingFile} label="Split PDF Document" />
         ) : (
           <div className="space-y-8">
             {/* Header section */}
@@ -285,140 +287,155 @@ export default function SplitTool() {
                 </h1>
                 <p className="text-sm font-bold uppercase tracking-widest text-neutral-400">Divide a PDF into separate files or extract specific pages easily.</p>
               </div>
-              <label className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl transition-all shadow-lg shadow-blue-500/20 cursor-pointer active:scale-95 text-sm uppercase italic tracking-tighter shrink-0">
-                <Plus className="w-5 h-5" />
-                ADD MORE
-                <input type="file" className="hidden" accept=".pdf" onChange={(e) => e.target.files && handleFiles(Array.from(e.target.files))} />
-              </label>
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => setShowOptions(!showOptions)}
+                  className={cn(
+                    "flex items-center justify-center gap-2 px-6 py-3 rounded-2xl border-2 transition-all shadow-md active:scale-95 text-xs font-black uppercase italic tracking-tighter shrink-0",
+                    showOptions 
+                      ? "bg-neutral-100 border-neutral-300 dark:bg-neutral-800 dark:border-neutral-700 text-blue-600" 
+                      : "bg-white border-neutral-200 dark:bg-neutral-900 dark:border-neutral-800 text-neutral-400 hover:border-neutral-300"
+                  )}
+                >
+                  <Pencil className="w-4 h-4" />
+                  {showOptions ? 'HIDE OPTIONS' : 'OPTIONS'}
+                </button>
+              </div>
             </div>
 
-            {/* Strategy & Options Section - Now Full Width at Top */}
-            <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[40px] p-8 shadow-xl shadow-black/5 space-y-8">
-              <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
-                {/* File Preview & Mode Selector */}
-                <div className="xl:col-span-8 space-y-8">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="flex items-center gap-3 text-blue-600">
-                      <Settings2 className="w-5 h-5" />
-                      <h3 className="text-xs font-black tracking-widest uppercase">Select Split Strategy</h3>
-                    </div>
-                    <div className="flex items-center gap-3 px-4 py-2 bg-neutral-50 dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700">
-                      <div className="w-8 aspect-[1/1.414] bg-white dark:bg-neutral-900 rounded border border-neutral-200 dark:border-neutral-700 flex items-center justify-center">
-                        <FileText className="w-4 h-4 text-blue-600/50" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-black uppercase text-neutral-900 dark:text-white truncate max-w-[150px]">{file.name}</p>
-                        <p className="text-[8px] font-bold text-neutral-400 uppercase">{formatBytes(file.size)} • {totalPages} Pages</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    {[
-                      { id: 'all', label: 'Split into files', icon: <Layers className="w-4 h-4" />, sub: 'Each page as separate PDF' },
-                      { id: 'range', label: 'Custom Range', icon: <Scissors className="w-4 h-4" />, sub: 'e.g. 1-5, 10, 15-20' },
-                      { id: 'extract', label: 'Extract Selected', icon: <LayoutGrid className="w-4 h-4" />, sub: 'Select pages from grid' }
-                    ].map((mode) => (
-                      <button
-                        key={mode.id}
-                        onClick={() => setSplitMode(mode.id as SplitMode)}
-                        className={cn(
-                          "group flex items-center gap-3 px-4 py-4 rounded-2xl border-2 transition-all text-left w-full",
-                          splitMode === mode.id 
-                            ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20" 
-                            : "bg-white dark:bg-neutral-900 border-neutral-100 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-700"
-                        )}
-                      >
-                        <div className={cn(
-                          "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
-                          splitMode === mode.id ? "bg-white/20" : "bg-neutral-100 dark:bg-neutral-800 group-hover:bg-neutral-200"
-                        )}>
-                          {React.cloneElement(mode.icon as React.ReactElement, { className: "w-5 h-5" })}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[10px] font-black uppercase tracking-tight leading-none mb-1">{mode.label}</p>
-                          <p className={cn(
-                            "text-[8px] font-bold uppercase tracking-widest",
-                            splitMode === mode.id ? "text-blue-100" : "text-neutral-400"
-                          )}>{mode.sub}</p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-
-                  <AnimatePresence mode="wait">
-                    {splitMode === 'range' && (
-                      <motion.div 
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="space-y-3"
-                      >
-                        <div className="flex items-center justify-between">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Page Range</label>
-                          {rangeError && (
-                            <div className="flex items-center gap-1 text-[8px] font-black uppercase text-red-500">
-                              <AlertCircle className="w-3 h-3" />
-                              {rangeError}
+            <AnimatePresence>
+              {showOptions && (
+                <motion.div 
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden"
+                >
+                  {/* Strategy & Options Section - Now Full Width at Top */}
+                  <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[40px] p-8 shadow-xl shadow-black/5 space-y-8 mb-8">
+                    <div className="grid grid-cols-1 gap-8 items-start">
+                      {/* File Preview & Mode Selector */}
+                      <div className="space-y-8">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div className="flex items-center gap-3 text-blue-600">
+                            <Pencil className="w-5 h-5" />
+                            <h3 className="text-xs font-black tracking-widest uppercase">Select Split Strategy</h3>
+                          </div>
+                          <div className="flex items-center gap-3 px-4 py-2 bg-neutral-50 dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700">
+                            <div className="w-8 aspect-[1/1.414] bg-white dark:bg-neutral-900 rounded border border-neutral-200 dark:border-neutral-700 flex items-center justify-center">
+                              <FileText className="w-4 h-4 text-blue-600/50" />
                             </div>
-                          )}
+                            <div className="min-w-0">
+                              <p className="text-[10px] font-black uppercase text-neutral-900 dark:text-white truncate max-w-[150px]">{file.name}</p>
+                              <p className="text-[8px] font-bold text-neutral-400 uppercase">{formatBytes(file.size)} • {totalPages} Pages</p>
+                            </div>
+                          </div>
                         </div>
-                        <input 
-                          type="text" 
-                          placeholder="e.g. 1-5, 8, 12-15"
-                          value={rangeStr} 
-                          onChange={(e) => setRangeStr(e.target.value)} 
-                          className={cn(
-                            "w-full px-6 py-4 bg-neutral-50 dark:bg-neutral-800 rounded-2xl border-2 font-black text-xl transition-all",
-                            rangeError ? "border-red-500/50 text-red-600" : "border-transparent focus:border-blue-500"
-                          )}
-                        />
-                        <p className="text-[10px] font-bold text-neutral-500 italic">
-                          Separate ranges with commas. Available pages: 1 to {totalPages}
-                        </p>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
 
-                {/* Finalizing Action Area */}
-                <div className="xl:col-span-4 border-t xl:border-t-0 xl:border-l border-neutral-100 dark:border-neutral-800 pt-8 xl:pt-0 xl:pl-8 flex flex-col justify-center">
-                  <div className="space-y-6">
-                    {isSplitting && (
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-black uppercase text-blue-600 tracking-widest">{processingStage}</span>
-                          <span className="text-[10px] font-black text-blue-600">{progress}%</span>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          {[
+                            { id: 'all', label: 'Split into files', icon: <Layers className="w-4 h-4" />, sub: 'Each page as separate PDF' },
+                            { id: 'range', label: 'Custom Range', icon: <Scissors className="w-4 h-4" />, sub: 'e.g. 1-5, 10, 15-20' },
+                            { id: 'extract', label: 'Extract Selected', icon: <LayoutGrid className="w-4 h-4" />, sub: 'Select pages from grid' }
+                          ].map((mode) => (
+                            <button
+                              key={mode.id}
+                              onClick={() => setSplitMode(mode.id as SplitMode)}
+                              className={cn(
+                                "group flex items-center gap-3 px-4 py-4 rounded-2xl border-2 transition-all text-left w-full",
+                                splitMode === mode.id 
+                                  ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20" 
+                                  : "bg-white dark:bg-neutral-900 border-neutral-100 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-700"
+                              )}
+                            >
+                              <div className={cn(
+                                "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
+                                splitMode === mode.id ? "bg-white/20" : "bg-neutral-100 dark:bg-neutral-800 group-hover:bg-neutral-200"
+                              )}>
+                                {React.cloneElement(mode.icon as React.ReactElement, { className: "w-5 h-5" })}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[10px] font-black uppercase tracking-tight leading-none mb-1">{mode.label}</p>
+                                <p className={cn(
+                                  "text-[8px] font-bold uppercase tracking-widest",
+                                  splitMode === mode.id ? "text-blue-100" : "text-neutral-400"
+                                )}>{mode.sub}</p>
+                              </div>
+                            </button>
+                          ))}
                         </div>
-                        <div className="h-2 w-full bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
-                          <motion.div 
-                            initial={{ width: 0 }}
-                            animate={{ width: `${progress}%` }}
-                            className="h-full bg-blue-600"
-                          />
-                        </div>
-                      </div>
-                    )}
-                    <button 
-                      onClick={processSplit}
-                      disabled={isSplitting || (splitMode === 'range' && (!!rangeError || !rangeStr)) || (splitMode === 'extract' && selectedPages.size === 0)}
-                      className="w-full py-6 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-[24px] shadow-2xl shadow-blue-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed group"
-                    >
-                      {isSplitting ? <Loader2 className="w-6 h-6 animate-spin" /> : <Scissors className="w-6 h-6 transition-transform group-hover:rotate-12" />}
-                      <span className="text-lg tracking-tight">
-                        {isSplitting ? 'PROCESSING...' : splitMode === 'range' || splitMode === 'extract' ? 'GENERATE PDF' : 'SPLIT ALL PAGES'}
-                      </span>
-                    </button>
-                    <div className="flex items-center justify-center gap-6">
-                      <div className="flex items-center gap-2 text-[8px] font-black uppercase text-neutral-400 tracking-[0.2em]">
-                        <Shield className="w-3 h-3" />
-                        In-Browser
-                      </div>
-                      <div className="flex items-center gap-2 text-[8px] font-black uppercase text-neutral-400 tracking-[0.2em]">
-                        <Check className="w-3 h-3 text-green-500" />
-                        Private
+
+                        <AnimatePresence mode="wait">
+                          {splitMode === 'range' && (
+                            <motion.div 
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -10 }}
+                              className="space-y-3"
+                            >
+                              <div className="flex items-center justify-between">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Page Range</label>
+                                {rangeError && (
+                                  <div className="flex items-center gap-1 text-[8px] font-black uppercase text-red-500">
+                                    <AlertCircle className="w-3 h-3" />
+                                    {rangeError}
+                                  </div>
+                                )}
+                              </div>
+                              <input 
+                                type="text" 
+                                placeholder="e.g. 1-5, 8, 12-15"
+                                value={rangeStr} 
+                                onChange={(e) => setRangeStr(e.target.value)} 
+                                className={cn(
+                                  "w-full px-6 py-4 bg-neutral-50 dark:bg-neutral-800 rounded-2xl border-2 font-black text-xl transition-all",
+                                  rangeError ? "border-red-500/50 text-red-600" : "border-transparent focus:border-blue-500"
+                                )}
+                              />
+                              <p className="text-[10px] font-bold text-neutral-500 italic">
+                                Separate ranges with commas. Available pages: 1 to {totalPages}
+                              </p>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
                     </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[40px] p-8 shadow-xl shadow-black/5 not-italic">
+              <div className="space-y-6 max-w-2xl mx-auto">
+                {isSplitting && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase text-blue-600 tracking-widest">{processingStage}</span>
+                      <span className="text-[10px] font-black text-blue-600">{progress}%</span>
+                    </div>
+                    <div className="h-2 w-full bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${progress}%` }} className="h-full bg-blue-600" />
+                    </div>
+                  </div>
+                )}
+                <button 
+                  onClick={processSplit}
+                  disabled={isSplitting || (splitMode === 'range' && (!!rangeError || !rangeStr)) || (splitMode === 'extract' && selectedPages.size === 0)}
+                  className="w-full py-6 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-[24px] shadow-2xl shadow-blue-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed group"
+                >
+                  {isSplitting ? <Loader2 className="w-6 h-6 animate-spin" /> : <Scissors className="w-6 h-6 transition-transform group-hover:rotate-12" />}
+                  <span className="text-lg tracking-tight uppercase italic">
+                    {isSplitting ? 'COMPILING...' : splitMode === 'range' || splitMode === 'extract' ? 'GENERATE PDF' : 'SPLIT ALL PAGES'}
+                  </span>
+                </button>
+                <div className="flex items-center justify-center gap-6">
+                  <div className="flex items-center gap-2 text-[8px] font-black uppercase text-neutral-400 tracking-[0.2em]">
+                    <Shield className="w-3 h-3" />
+                    Safe Sandbox Extraction
+                  </div>
+                  <div className="flex items-center gap-2 text-[8px] font-black uppercase text-neutral-400 tracking-[0.2em]">
+                    <Check className="w-3 h-3 text-green-500" />
+                    Browser-Only
                   </div>
                 </div>
               </div>
