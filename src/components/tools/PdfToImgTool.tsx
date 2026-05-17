@@ -10,7 +10,7 @@ import {
   Wand2,
   Shield, 
   Files,
-  Pencil,
+  Settings2,
   FileCheck,
   CheckCircle2,
   Archive,
@@ -19,6 +19,7 @@ import {
   Layers,
   Search,
   FileText,
+  Plus,
   LayoutGrid,
   Check,
   Scissors,
@@ -73,7 +74,6 @@ export default function PdfToImgTool() {
   const [selectedPages, setSelectedPages] = useState<Set<number>>(new Set());
   const [totalPages, setTotalPages] = useState(0);
   
-  const [showOptions, setShowOptions] = useState(false);
   const [result, setResult] = useState<{ url: string; size: number; isZip: boolean } | null>(null);
   const [isDownloaded, setIsDownloaded] = useState(false);
   const [viewerImg, setViewerImg] = useState<string | null>(null);
@@ -82,16 +82,9 @@ export default function PdfToImgTool() {
 
   const blocker = useFileExitConfirm({ isDirty: !!file && !result });
 
-  useEffect(() => {
-    return () => {
-      if (result) URL.revokeObjectURL(result.url);
-    };
-  }, [result]);
-
   const handleFiles = async (files: File[]) => {
     if (files.length === 0) return;
     const f = files[0];
-    setProcessingStage('Reading source document...');
     setFile(f);
     setIsLoadingFile(true);
     setPages([]);
@@ -332,7 +325,7 @@ export default function PdfToImgTool() {
             onDownload={handleDownload}
             isDownloaded={isDownloaded}
             onBack={() => setResult(null)}
-            onReset={() => { setFile(null); setPages([]); setResult(null); setIsDownloaded(false); setShowOptions(false); setRangeStr(''); setSelectedPages(new Set()); }}
+            onReset={() => { setFile(null); setPages([]); setResult(null); setIsDownloaded(false); setRangeStr(''); setSelectedPages(new Set()); }}
           />
         )}
       </AnimatePresence>
@@ -355,183 +348,163 @@ export default function PdfToImgTool() {
                 </h1>
                 <p className="text-sm font-bold uppercase tracking-widest text-neutral-400">Extract pages from your PDF as high-quality images.</p>
               </div>
-              <div className="flex items-center gap-3">
-                 <button 
-                  onClick={() => setShowOptions(!showOptions)}
-                  className={cn(
-                    "flex items-center justify-center gap-2 px-6 py-3 rounded-2xl border-2 transition-all shadow-md active:scale-95 text-xs font-black uppercase italic tracking-tighter shrink-0",
-                    showOptions 
-                      ? "bg-neutral-100 border-neutral-300 dark:bg-neutral-800 dark:border-neutral-700 text-blue-600" 
-                      : "bg-white border-neutral-200 dark:bg-neutral-900 dark:border-neutral-800 text-neutral-400 hover:border-neutral-300"
-                  )}
-                >
-                  <Pencil className="w-4 h-4" />
-                  {showOptions ? 'HIDE OPTIONS' : 'OPTIONS'}
-                </button>
-              </div>
+              <label className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl transition-all shadow-lg shadow-blue-500/20 cursor-pointer active:scale-95 text-sm uppercase italic tracking-tighter shrink-0">
+                <Plus className="w-5 h-5" />
+                ADD MORE
+                <input type="file" className="hidden" accept=".pdf" onChange={(e) => e.target.files && handleFiles(Array.from(e.target.files))} />
+              </label>
             </div>
 
-            <AnimatePresence>
-              {showOptions && (
-                <motion.div 
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="overflow-hidden"
-                >
-                  {/* Strategy and Options - Wide Section at Top */}
-                  <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[40px] p-8 shadow-xl shadow-black/5 space-y-8 mb-8">
-                    <div className="grid grid-cols-1 gap-8 items-start">
-                      <div className="flex flex-col h-full">
-                        <div className="flex items-center justify-between mb-6">
-                          <div className="flex items-center gap-2 text-blue-600">
-                            <Files className="w-5 h-5" />
-                            <h3 className="text-xs font-black tracking-widest uppercase">Export Strategy</h3>
-                          </div>
-                          {exportMode === 'extract' && (
-                            <span className="text-[10px] font-black uppercase text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">
-                              {selectedPages.size} Selected / {totalPages} Total
-                            </span>
-                          )}
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                           {[
-                             { id: 'all', label: 'Export All', icon: <Layers className="w-4 h-4" />, sub: 'All pages as images' },
-                             { id: 'range', label: 'Custom Range', icon: <Scissors className="w-4 h-4" />, sub: 'e.g. 1-5, 10, 15-20' },
-                             { id: 'extract', label: 'Extract Selected', icon: <LayoutGrid className="w-4 h-4" />, sub: 'Select pages from grid' }
-                           ].map((mode) => (
-                             <button
-                               key={mode.id}
-                               onClick={() => setExportMode(mode.id as ExportMode)}
-                               className={cn(
-                                 "group flex items-center gap-3 px-4 py-4 rounded-2xl border-2 transition-all text-left",
-                                 exportMode === mode.id 
-                                   ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20" 
-                                   : "bg-white dark:bg-neutral-900 border-neutral-100 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-700 shadow-sm"
-                               )}
-                             >
-                               <div className={cn(
-                                 "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
-                                 exportMode === mode.id ? "bg-white/20" : "bg-neutral-100 dark:bg-neutral-800 group-hover:bg-neutral-200"
-                               )}>
-                                 {React.cloneElement(mode.icon as React.ReactElement, { className: "w-5 h-5 transition-transform group-hover:scale-110" })}
-                               </div>
-                               <div className="flex-1 min-w-0">
-                                 <p className="text-[10px] font-black uppercase tracking-tight leading-none mb-1">{mode.label}</p>
-                                 <p className={cn(
-                                   "text-[8px] font-bold uppercase tracking-widest transition-colors",
-                                   exportMode === mode.id ? "text-blue-100" : "text-neutral-400"
-                                 )}>{mode.sub}</p>
-                               </div>
-                             </button>
-                           ))}
-                        </div>
+            {/* Strategy and Options - Wide Section at Top */}
+            <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[40px] p-8 shadow-xl shadow-black/5 space-y-8">
+              <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+                <div className="xl:col-span-8 flex flex-col h-full">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-2 text-blue-600">
+                      <Files className="w-5 h-5" />
+                      <h3 className="text-xs font-black tracking-widest uppercase">Export Strategy</h3>
+                    </div>
+                    {exportMode === 'extract' && (
+                      <span className="text-[10px] font-black uppercase text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">
+                        {selectedPages.size} Selected / {totalPages} Total
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                     {[
+                       { id: 'all', label: 'Export All', icon: <Layers className="w-4 h-4" />, sub: 'All pages as images' },
+                       { id: 'range', label: 'Custom Range', icon: <Scissors className="w-4 h-4" />, sub: 'e.g. 1-5, 10, 15-20' },
+                       { id: 'extract', label: 'Extract Selected', icon: <LayoutGrid className="w-4 h-4" />, sub: 'Select pages from grid' }
+                     ].map((mode) => (
+                       <button
+                         key={mode.id}
+                         onClick={() => setExportMode(mode.id as ExportMode)}
+                         className={cn(
+                           "group flex items-center gap-3 px-4 py-4 rounded-2xl border-2 transition-all text-left",
+                           exportMode === mode.id 
+                             ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20" 
+                             : "bg-white dark:bg-neutral-900 border-neutral-100 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-700 shadow-sm"
+                         )}
+                       >
+                         <div className={cn(
+                           "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
+                           exportMode === mode.id ? "bg-white/20" : "bg-neutral-100 dark:bg-neutral-800 group-hover:bg-neutral-200"
+                         )}>
+                           {React.cloneElement(mode.icon as React.ReactElement, { className: "w-5 h-5 transition-transform group-hover:scale-110" })}
+                         </div>
+                         <div className="flex-1 min-w-0">
+                           <p className="text-[10px] font-black uppercase tracking-tight leading-none mb-1">{mode.label}</p>
+                           <p className={cn(
+                             "text-[8px] font-bold uppercase tracking-widest transition-colors",
+                             exportMode === mode.id ? "text-blue-100" : "text-neutral-400"
+                           )}>{mode.sub}</p>
+                         </div>
+                       </button>
+                     ))}
+                  </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-end mt-auto">
-                          <div className="space-y-4">
-                            <AnimatePresence mode="wait">
-                              {exportMode === 'range' ? (
-                                <motion.div 
-                                  initial={{ opacity: 0, scale: 0.95 }}
-                                  animate={{ opacity: 1, scale: 1 }}
-                                  exit={{ opacity: 0, scale: 0.95 }}
-                                  className="space-y-3"
-                                >
-                                  <div className="flex items-center justify-between">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 italic">Page Range</label>
-                                    {rangeError && (
-                                      <div className="flex items-center gap-1 text-[8px] font-black uppercase text-red-500">
-                                        <AlertCircle className="w-3 h-3" />
-                                        {rangeError}
-                                      </div>
-                                    )}
-                                  </div>
-                                  <input 
-                                    type="text" 
-                                    placeholder="e.g. 1-5, 8, 12-15"
-                                    value={rangeStr} 
-                                    onChange={(e) => setRangeStr(e.target.value)} 
-                                    className={cn(
-                                      "w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 rounded-xl border-2 font-black text-sm transition-all italic",
-                                      rangeError ? "border-red-500/30" : "border-transparent focus:border-blue-500"
-                                    )}
-                                  />
-                                </motion.div>
-                              ) : (
-                                <div className="h-[74px] flex items-center px-4 bg-neutral-50 dark:bg-neutral-800/50 rounded-xl border border-neutral-100 dark:border-neutral-800">
-                                   <div className="flex items-center gap-4">
-                                      <FileCheck className="w-5 h-5 text-neutral-300" />
-                                      <div className="space-y-1">
-                                         <p className="text-[10px] font-black uppercase text-neutral-900 dark:text-white truncate max-w-[200px]">{file.name}</p>
-                                         <p className="text-[8px] font-bold text-neutral-400 uppercase tracking-widest italic">{totalPages} Pages Found</p>
-                                      </div>
-                                   </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-end mt-auto">
+                    <div className="space-y-4">
+                      <AnimatePresence mode="wait">
+                        {exportMode === 'range' ? (
+                          <motion.div 
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="space-y-3"
+                          >
+                            <div className="flex items-center justify-between">
+                              <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 italic">Page Range</label>
+                              {rangeError && (
+                                <div className="flex items-center gap-1 text-[8px] font-black uppercase text-red-500">
+                                  <AlertCircle className="w-3 h-3" />
+                                  {rangeError}
                                 </div>
                               )}
-                            </AnimatePresence>
-                          </div>
-
-                          <div className="space-y-3">
-                             <p className="text-[10px] font-black uppercase text-neutral-400 tracking-wider italic">Format & Quality</p>
-                             <div className="flex gap-2">
-                                <div className="flex-1 grid grid-cols-2 gap-1 p-1 bg-neutral-100 dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700">
-                                   {['jpg', 'png'].map(f => (
-                                     <button 
-                                       key={f} 
-                                       onClick={() => setFormat(f as any)} 
-                                       className={cn(
-                                         "py-2 rounded-lg font-black text-[10px] uppercase transition-all",
-                                         format === f ? "bg-white dark:bg-neutral-700 text-blue-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
-                                       )}
-                                     >
-                                       {f}
-                                     </button>
-                                   ))}
+                            </div>
+                            <input 
+                              type="text" 
+                              placeholder="e.g. 1-5, 8, 12-15"
+                              value={rangeStr} 
+                              onChange={(e) => setRangeStr(e.target.value)} 
+                              className={cn(
+                                "w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 rounded-xl border-2 font-black text-sm transition-all italic",
+                                rangeError ? "border-red-500/30" : "border-transparent focus:border-blue-500"
+                              )}
+                            />
+                          </motion.div>
+                        ) : (
+                          <div className="h-[74px] flex items-center px-4 bg-neutral-50 dark:bg-neutral-800/50 rounded-xl border border-neutral-100 dark:border-neutral-800">
+                             <div className="flex items-center gap-4">
+                                <FileCheck className="w-5 h-5 text-neutral-300" />
+                                <div className="space-y-1">
+                                   <p className="text-[10px] font-black uppercase text-neutral-900 dark:text-white truncate max-w-[200px]">{file.name}</p>
+                                   <p className="text-[8px] font-bold text-neutral-400 uppercase tracking-widest italic">{totalPages} Pages Found</p>
                                 </div>
-                                <select 
-                                  value={quality} 
-                                  onChange={(e) => setQuality(Number(e.target.value))}
-                                  className="bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl px-3 py-2 text-[10px] font-black uppercase text-neutral-600 outline-none focus:ring-2 focus:ring-blue-500/20"
-                                >
-                                  <option value={0.95}>BEST</option>
-                                  <option value={0.8}>HIGH</option>
-                                  <option value={0.6}>LOW</option>
-                                </select>
                              </div>
                           </div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+
+                    <div className="space-y-3">
+                       <p className="text-[10px] font-black uppercase text-neutral-400 tracking-wider italic">Format & Quality</p>
+                       <div className="flex gap-2">
+                          <div className="flex-1 grid grid-cols-2 gap-1 p-1 bg-neutral-100 dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700">
+                             {['jpg', 'png'].map(f => (
+                               <button 
+                                 key={f} 
+                                 onClick={() => setFormat(f as any)} 
+                                 className={cn(
+                                   "py-2 rounded-lg font-black text-[10px] uppercase transition-all",
+                                   format === f ? "bg-white dark:bg-neutral-700 text-blue-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
+                                 )}
+                               >
+                                 {f}
+                               </button>
+                             ))}
+                          </div>
+                          <select 
+                            value={quality} 
+                            onChange={(e) => setQuality(Number(e.target.value))}
+                            className="bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl px-3 py-2 text-[10px] font-black uppercase text-neutral-600 outline-none focus:ring-2 focus:ring-blue-500/20"
+                          >
+                            <option value={0.95}>BEST</option>
+                            <option value={0.8}>HIGH</option>
+                            <option value={0.6}>LOW</option>
+                          </select>
+                       </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="xl:col-span-4 border-t xl:border-t-0 xl:border-l border-neutral-100 dark:border-neutral-800 pt-8 xl:pt-0 xl:pl-8 flex flex-col justify-center">
+                  <div className="space-y-6">
+                    {isConverting && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-black uppercase text-blue-600 tracking-widest">{processingStage}</span>
+                          <span className="text-[10px] font-black text-blue-600">{progress}%</span>
+                        </div>
+                        <div className="h-2 w-full bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+                          <motion.div initial={{ width: 0 }} animate={{ width: `${progress}%` }} className="h-full bg-blue-600" />
                         </div>
                       </div>
+                    )}
+                    <button 
+                      onClick={convertPages}
+                      disabled={isConverting || pages.length === 0 || (exportMode === 'range' && (!!rangeError || !rangeStr)) || (exportMode === 'extract' && selectedPages.size === 0)}
+                      className="group w-full py-6 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-black rounded-[24px] shadow-2xl shadow-blue-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
+                    >
+                      {isConverting ? <Loader2 className="w-6 h-6 animate-spin" /> : <Archive className="w-6 h-6 transition-transform group-hover:scale-110" />}
+                      <span className="text-lg tracking-tight uppercase">{isConverting ? 'GENERATING...' : 'GENERATE IMAGES'}</span>
+                    </button>
+                    <div className="flex items-center justify-center gap-2 text-[8px] font-black uppercase text-neutral-400 tracking-[0.2em]">
+                      <ShieldCheck className="w-3.5 h-3.5 text-blue-500" />
+                      Encrypted Browser Export
                     </div>
                   </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[40px] p-8 shadow-xl shadow-black/5 not-italic">
-              <div className="space-y-6 max-w-2xl mx-auto">
-                {isConverting && (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-black uppercase text-blue-600 tracking-widest">{processingStage}</span>
-                      <span className="text-[10px] font-black text-blue-600">{progress}%</span>
-                    </div>
-                    <div className="h-2 w-full bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
-                      <motion.div initial={{ width: 0 }} animate={{ width: `${progress}%` }} className="h-full bg-blue-600" />
-                    </div>
-                  </div>
-                )}
-                <button 
-                  onClick={convertPages}
-                  disabled={isConverting || pages.length === 0 || (exportMode === 'range' && (!!rangeError || !rangeStr)) || (exportMode === 'extract' && selectedPages.size === 0)}
-                  className="group w-full py-6 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-black rounded-[24px] shadow-2xl shadow-blue-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
-                >
-                  {isConverting ? <Loader2 className="w-6 h-6 animate-spin" /> : <Archive className="w-6 h-6 transition-transform group-hover:scale-110" />}
-                  <span className="text-lg tracking-tight uppercase italic">{isConverting ? 'COMPILING...' : 'GENERATE IMAGES'}</span>
-                </button>
-                <div className="flex items-center justify-center gap-2 text-[8px] font-black uppercase text-neutral-400 tracking-[0.2em]">
-                  <ShieldCheck className="w-3.5 h-3.5 text-blue-500" />
-                  Browser-Authored Sandbox
                 </div>
               </div>
             </div>
