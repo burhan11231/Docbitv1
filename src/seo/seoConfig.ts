@@ -22,9 +22,23 @@ export const SEO_CONFIG: Record<string, PageSEO> = {
   },
   about: {
     title: 'About DocBit – Fast, Privacy-Focused PDF Tools',
-    description: 'DocBit provides fast and privacy-focused PDF tools designed for students, professionals, and mobile users in India. Convert, merge, and split documents online without unnecessary complexity.',
-    keywords: 'about docbit, pdf utility platform, online pdf tools india, free document converter',
+    description: 'Learn about DocBit, a platform built on the belief that document processing should be fast, private, and local. We use modern web technologies to process your PDFs entirely in your browser.',
+    keywords: 'about docbit, browser-based pdf tools, private pdf processing, local pdf utility, wasm pdf editor',
     canonical: `${APP_DOMAIN}/about`,
+    ogImage: GLOBAL_OG_IMAGE,
+  },
+  privacy: {
+    title: 'Privacy Policy – Your Data Stays Yours',
+    description: 'Read the DocBit Privacy Policy. We are committed to absolute privacy. Since we process files locally on your device, we never see or store your sensitive documents.',
+    keywords: 'privacy policy, docbit privacy, data protection, local processing privacy',
+    canonical: `${APP_DOMAIN}/privacy`,
+    ogImage: GLOBAL_OG_IMAGE,
+  },
+  terms: {
+    title: 'Terms of Service – Simple & Transparent',
+    description: 'Review the Terms of Service for DocBit. We provide free, browser-based PDF tools with a focus on ease of use and user empowerment.',
+    keywords: 'terms of service, docbit terms, usage policy',
+    canonical: `${APP_DOMAIN}/terms`,
     ogImage: GLOBAL_OG_IMAGE,
   },
   imgToPdf: {

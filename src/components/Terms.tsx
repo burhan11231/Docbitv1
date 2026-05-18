@@ -3,9 +3,20 @@ import { motion } from 'motion/react';
 import { FileText, ArrowLeft, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+import { SEO } from './SEO';
+import { SEO_CONFIG, APP_DOMAIN } from '../seo/seoConfig';
+import { getBreadcrumbSchema } from '../seo/structuredData';
+
 export default function Terms() {
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-black py-20 px-4">
+      <SEO 
+        {...SEO_CONFIG.terms} 
+        schema={getBreadcrumbSchema([
+          { name: 'Home', item: APP_DOMAIN },
+          { name: 'Terms of Service', item: SEO_CONFIG.terms.canonical }
+        ])}
+      />
       <div className="max-w-4xl mx-auto space-y-12">
         
         {/* Header */}
@@ -17,12 +28,13 @@ export default function Terms() {
             <ArrowLeft className="w-4 h-4" />
             Home
           </Link>
-          <h1 className="text-5xl font-black tracking-tight text-neutral-900 dark:text-white uppercase">
-            Terms of <span className="text-blue-600 italic underline">Service</span>
+          <h1 className="text-5xl font-black tracking-tight text-neutral-900 dark:text-white uppercase italic">
+            Terms of <span className="text-blue-600 underline">Service</span>
           </h1>
-          <p className="text-neutral-500 dark:text-neutral-400 font-bold max-w-2xl text-lg">
-            Last Updated: May 3, 2024
+          <p className="text-neutral-500 dark:text-neutral-400 font-bold max-w-2xl text-lg italic">
+            Clarity and transparency for every user.
           </p>
+          <p className="text-xs text-neutral-400 font-bold uppercase tracking-widest">Last Updated: May 3, 2024</p>
         </div>
 
         {/* Main Content */}

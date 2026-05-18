@@ -30,6 +30,7 @@ import { readFileAsArrayBuffer, cn, formatBytes } from '../../lib/utils';
 import { DownloadResult } from '../DownloadResult';
 import { ImageViewer } from '../ImageViewer';
 import { ColorPickerModal } from '../ColorPickerModal';
+import { FileGrid, GridItem } from '../FileGrid';
 import { SEO } from '../SEO';
 import { ToolInfo } from '../ToolInfo';
 import { ToolContent } from '../ToolContent';
@@ -47,18 +48,10 @@ type FitMode = 'fit' | 'fill' | 'stretch';
 type PageSize = 'A4' | 'A3' | 'Letter' | 'Custom';
 type Orientation = 'portrait' | 'landscape';
 
-interface ImgData {
-  id: string;
-  file: File;
-  thumbnail: string;
-  rotation: number;
-  status: 'ready' | 'processing';
-}
-
 export default function ImgToPdfTool() {
-  const MAX_FILES = 50;
+  const MAX_FILES = 300;
   const tool = TOOLS.find(t => t.id === 'img-to-pdf')!;
-  const [images, setImages] = useState<ImgData[]>([]);
+  const [images, setImages] = useState<GridItem[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isAddingFiles, setIsAddingFiles] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -76,11 +69,10 @@ export default function ImgToPdfTool() {
   
   // Advanced Options
   const [quality, setQuality] = useState<'high' | 'medium' | 'small'>('medium');
-  const [spacing, setSpacing] = useState(0);
 
   const [result, setResult] = useState<{ url: string; size: number } | null>(null);
   const [isDownloaded, setIsDownloaded] = useState(false);
-  const [viewerItem, setViewerItem] = useState<ImgData | null>(null);
+  const [viewerItem, setViewerItem] = useState<GridItem | null>(null);
 
   const blocker = useFileExitConfirm({ isDirty: images.length > 0 && !result });
 
@@ -93,45 +85,70 @@ export default function ImgToPdfTool() {
     const remainingSlots = MAX_FILES - images.length;
     const filesToProcess = files.slice(0, remainingSlots);
 
-    if (files.length > remainingSlots) {
-      alert(`Only the first ${remainingSlots} images were added (Limit: ${MAX_FILES}).`);
-    }
-
     setIsAddingFiles(true);
     
-    // Create pending items
-    const pending: ImgData[] = filesToProcess.map(f => ({
-      id: Math.random().toString(36).substr(2, 9),
-      file: f,
-      thumbnail: URL.createObjectURL(f),
-      rotation: 0,
-      status: 'ready'
-    }));
+    const newItems: GridItem[] = [];
+    
+    // Create pending items for immediate visual feedback
+    for (const f of filesToProcess) {
+       const item: GridItem = {
+          id: Math.random().toString(36).substr(2, 9),
+          file: f,
+          size: f.size,
+          rotation: 0,
+          status: 'processing'
+       };
+       newItems.push(item);
+    }
 
-    setImages(prev => [...prev, ...pending]);
+    setImages(prev => [...prev, ...newItems]);
     setResult(null);
     setIsDownloaded(false);
+
+    // Generate thumbnails in background
+    for (const item of newItems) {
+        try {
+            const url = URL.createObjectURL(item.file);
+            setImages(prev => prev.map(img => 
+                img.id === item.id ? { ...img, thumbnail: url, status: 'ready' } : img
+            ));
+            await new Promise(r => setTimeout(r, 20)); // Keep UI thread smooth
+        } catch (e) {
+            console.error('Thumbnail error:', e);
+        }
+    }
+
     setIsAddingFiles(false);
   };
 
-  const handleRotate = (id: string) => {
+  const handleRotate = (id: string, newRotation?: number) => {
     setImages(prev => prev.map(img => 
-      img.id === id ? { ...img, rotation: (img.rotation + 90) % 360 } : img
+      img.id === id 
+        ? { ...img, rotation: newRotation !== undefined ? newRotation : ((img.rotation || 0) + 90) % 360 } 
+        : img
     ));
+    
+    if (viewerItem?.id === id) {
+        setViewerItem(prev => prev ? { ...prev, rotation: newRotation !== undefined ? newRotation : ((prev.rotation || 0) + 90) % 360 } : null);
+    }
   };
 
   const removeImg = (id: string) => {
-    setImages(prev => prev.filter(img => img.id !== id));
+    setImages(prev => {
+        const item = prev.find(i => i.id === id);
+        if (item?.thumbnail) URL.revokeObjectURL(item.thumbnail);
+        return prev.filter(img => img.id !== id);
+    });
   };
 
-  const handleMove = (id: string, direction: 'up' | 'down') => {
+  const handleMove = (id: string, direction: 'left' | 'right') => {
     const index = images.findIndex(img => img.id === id);
     if (index === -1) return;
     
     const newImages = [...images];
-    if (direction === 'up' && index > 0) {
+    if (direction === 'left' && index > 0) {
       [newImages[index], newImages[index - 1]] = [newImages[index - 1], newImages[index]];
-    } else if (direction === 'down' && index < images.length - 1) {
+    } else if (direction === 'right' && index < images.length - 1) {
       [newImages[index], newImages[index + 1]] = [newImages[index + 1], newImages[index]];
     }
     setImages(newImages);
@@ -152,60 +169,59 @@ export default function ImgToPdfTool() {
 
     try {
       const pdfDoc = await PDFDocument.create();
-      const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+      const qualityValue = quality === 'high' ? 0.92 : quality === 'medium' ? 0.75 : 0.5;
 
-      const qualityValue = quality === 'high' ? 0.95 : quality === 'medium' ? 0.8 : 0.6;
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d', { alpha: false });
+      if (!ctx) throw new Error('Canvas context failed');
 
       for (let i = 0; i < images.length; i++) {
-        const currentProgress = Math.round((i / images.length) * 100);
-        setProgress(currentProgress);
-        setProcessingStage(`Rendering image ${i + 1} of ${images.length}...`);
-
         const imgData = images[i];
+        setProcessingStage(`Rendering Part ${i + 1} of ${images.length}...`);
+        setProgress(Math.round((i / images.length) * 100));
+
         const img = new Image();
-        img.src = imgData.thumbnail;
+        img.src = URL.createObjectURL(imgData.file);
         await new Promise((resolve, reject) => {
           img.onload = resolve;
           img.onerror = reject;
         });
 
-        const canvas = document.createElement('canvas');
-        const isSwapped = imgData.rotation === 90 || imgData.rotation === 270;
+        const rotation = imgData.rotation || 0;
+        const isSwapped = rotation === 90 || rotation === 270;
+        
         canvas.width = isSwapped ? img.naturalHeight : img.naturalWidth;
         canvas.height = isSwapped ? img.naturalWidth : img.naturalHeight;
         
-        const ctx = canvas.getContext('2d');
-        if (!ctx) throw new Error('Canvas context failed');
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
         
+        ctx.save();
         ctx.translate(canvas.width / 2, canvas.height / 2);
-        ctx.rotate((imgData.rotation * Math.PI) / 180);
+        ctx.rotate((rotation * Math.PI) / 180);
         ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
+        ctx.restore();
+
+        URL.revokeObjectURL(img.src);
 
         const imgBytes = await new Promise<ArrayBuffer>((resolve, reject) => {
-          try {
-            canvas.toBlob((blob) => {
-              if (blob) {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result as ArrayBuffer);
-                reader.onerror = () => reject(new Error('FileReader failed'));
-                reader.readAsArrayBuffer(blob);
-              } else {
-                reject(new Error('Canvas toBlob failed'));
-              }
-            }, 'image/jpeg', qualityValue);
-          } catch (e) {
-            reject(e);
-          }
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as ArrayBuffer);
+              reader.readAsArrayBuffer(blob);
+            } else {
+              reject(new Error('Encoding failed'));
+            }
+          }, 'image/jpeg', qualityValue);
         });
 
         const embeddedImg = await pdfDoc.embedJpg(imgBytes);
         const imgDims = embeddedImg.scale(1);
 
-        // Determine Page Size
         let pWidth, pHeight;
         if (pageSize === 'Custom') {
-          pWidth = customWidth;
-          pHeight = customHeight;
+          pWidth = customWidth; pHeight = customHeight;
         } else {
           const standard = PageSizes[pageSize];
           pWidth = orientation === 'portrait' ? standard[0] : standard[1];
@@ -213,72 +229,42 @@ export default function ImgToPdfTool() {
         }
 
         const page = pdfDoc.addPage([pWidth, pHeight]);
-        
-        // Background Color
-        page.drawRectangle({
-          x: 0,
-          y: 0,
-          width: pWidth,
-          height: pHeight,
-          color: hexToRgb(bgColor),
-        });
+        page.drawRectangle({ x: 0, y: 0, width: pWidth, height: pHeight, color: hexToRgb(bgColor) });
 
-        // Margins
         const safeWidth = pWidth - margin.left - margin.right;
         const safeHeight = pHeight - margin.top - margin.bottom;
-
-        let drawWidth = imgDims.width;
-        let drawHeight = imgDims.height;
-        let x = margin.left;
-        let y = margin.bottom;
-
-        const ratio = imgDims.width / imgDims.height;
-        const safeRatio = safeWidth / safeHeight;
+        let drawWidth = imgDims.width, drawHeight = imgDims.height;
+        const ratio = imgDims.width / imgDims.height, safeRatio = safeWidth / safeHeight;
 
         if (fitMode === 'fit') {
-          if (ratio > safeRatio) {
-            drawWidth = safeWidth;
-            drawHeight = safeWidth / ratio;
-          } else {
-            drawHeight = safeHeight;
-            drawWidth = safeHeight * ratio;
-          }
+          if (ratio > safeRatio) { drawWidth = safeWidth; drawHeight = safeWidth / ratio; }
+          else { drawHeight = safeHeight; drawWidth = safeHeight * ratio; }
         } else if (fitMode === 'fill') {
-          if (ratio > safeRatio) {
-            drawHeight = safeHeight;
-            drawWidth = safeHeight * ratio;
-          } else {
-            drawWidth = safeWidth;
-            drawHeight = safeWidth / ratio;
-          }
+          if (ratio > safeRatio) { drawHeight = safeHeight; drawWidth = safeHeight * ratio; }
+          else { drawWidth = safeWidth; drawHeight = safeWidth / ratio; }
         } else if (fitMode === 'stretch') {
-          drawWidth = safeWidth;
-          drawHeight = safeHeight;
+          drawWidth = safeWidth; drawHeight = safeHeight;
         }
 
-        // Center within safe area
-        x += (safeWidth - drawWidth) / 2;
-        y += (safeHeight - drawHeight) / 2;
-
         page.drawImage(embeddedImg, {
-          x,
-          y,
-          width: drawWidth,
-          height: drawHeight,
+          x: margin.left + (safeWidth - drawWidth) / 2,
+          y: margin.bottom + (safeHeight - drawHeight) / 2,
+          width: drawWidth, height: drawHeight,
         });
+
+        if (i % 5 === 0) await new Promise(r => setTimeout(r, 0));
       }
 
-      setProcessingStage('Finalizing PDF...');
+      setProcessingStage('Finalizing Document...');
       setProgress(100);
 
       const pdfBytes = await pdfDoc.save();
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      setResult({ url, size: blob.size });
+      setResult({ url: URL.createObjectURL(blob), size: blob.size });
       setIsDownloaded(false);
     } catch (e) {
       console.error(e);
-      alert('Error during conversion.');
+      alert('Error during conversion. Large files can be memory intensive.');
     } finally {
       setIsProcessing(false);
       setProgress(0);
@@ -300,11 +286,7 @@ export default function ImgToPdfTool() {
       <SEO 
         {...SEO_CONFIG.imgToPdf}
         schema={[
-          getWebApplicationSchema(
-            SEO_CONFIG.imgToPdf.title,
-            SEO_CONFIG.imgToPdf.description,
-            SEO_CONFIG.imgToPdf.canonical
-          ),
+          getWebApplicationSchema(SEO_CONFIG.imgToPdf.title, SEO_CONFIG.imgToPdf.description, SEO_CONFIG.imgToPdf.canonical),
           getBreadcrumbSchema([
             { name: 'Home', item: APP_DOMAIN },
             { name: 'Image to PDF', item: SEO_CONFIG.imgToPdf.canonical }
@@ -313,6 +295,15 @@ export default function ImgToPdfTool() {
           tool.steps && getHowToSchema(tool.name, tool.description, tool.steps)
         ].filter(Boolean)}
       />
+
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 px-2">
+        <div className="space-y-2">
+          <h1 className="text-4xl md:text-5xl font-black tracking-tight text-neutral-900 dark:text-white uppercase italic">
+            Convert <span className="text-blue-600">Images</span> to PDF
+          </h1>
+          <p className="text-sm font-bold uppercase tracking-widest text-neutral-400">High-performance image synthesis on your device.</p>
+        </div>
+      </div>
 
       <AnimatePresence>
         {result && (
@@ -337,23 +328,8 @@ export default function ImgToPdfTool() {
         />
       ) : (
         <div className="space-y-8 italic">
-          {/* Header section */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 px-2">
-            <div className="space-y-2">
-              <h1 className="text-3xl font-black flex items-center gap-3">
-                Convert Images to PDF
-              </h1>
-              <p className="text-sm font-bold uppercase tracking-widest text-neutral-400 font-mono italic">Sequential Composition Engine</p>
-            </div>
-            <label className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl transition-all shadow-lg shadow-blue-500/20 cursor-pointer active:scale-95 text-sm uppercase italic tracking-tighter shrink-0">
-              <Plus className="w-5 h-5" />
-              ADD MORE
-              <input type="file" multiple className="hidden" accept="image/*" onChange={(e) => e.target.files && handleFiles(Array.from(e.target.files))} />
-            </label>
-          </div>
-
-          {/* Layout and Advanced Options - Wide Section at Top */}
           <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[40px] p-8 shadow-xl shadow-black/5 space-y-10 not-italic">
+            {/* Options grid */}
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
               <div className="xl:col-span-8 flex flex-col h-full space-y-8">
                 <div className="flex items-center gap-2 text-blue-600">
@@ -362,7 +338,6 @@ export default function ImgToPdfTool() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {/* Left Sub-Column */}
                   <div className="space-y-6">
                     <div className="space-y-3">
                        <p className="text-[10px] font-black uppercase text-neutral-400 tracking-wider italic">Page Format</p>
@@ -424,7 +399,6 @@ export default function ImgToPdfTool() {
                     </div>
                   </div>
 
-                  {/* Right Sub-Column */}
                   <div className="space-y-6">
                     <div className="space-y-3">
                       <p className="text-[10px] font-black uppercase text-neutral-400 tracking-wider italic">Fit Algorithm</p>
@@ -465,7 +439,7 @@ export default function ImgToPdfTool() {
                     </div>
 
                     <div className="space-y-3">
-                       <p className="text-[10px] font-black uppercase text-neutral-400 tracking-wider italic">Image Fidelity</p>
+                       <p className="text-[10px] font-black uppercase text-neutral-400 tracking-wider italic">Quality Profile</p>
                        <div className="flex gap-1 p-1 bg-neutral-100 dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700">
                           {['small', 'medium', 'high'].map(q => (
                             <button
@@ -507,7 +481,7 @@ export default function ImgToPdfTool() {
                   <div className="flex flex-col items-center gap-3">
                      <div className="flex items-center justify-center gap-2 text-[8px] font-black uppercase text-neutral-400 tracking-[0.2em]">
                        <ShieldCheck className="w-3.5 h-3.5 text-blue-500" />
-                       Safe Sandbox Processing
+                       Safe Local Conversion
                      </div>
                   </div>
                 </div>
@@ -528,30 +502,19 @@ export default function ImgToPdfTool() {
             rotation={viewerItem?.rotation || 0}
             isOpen={!!viewerItem} 
             onClose={() => setViewerItem(null)} 
+            onRotate={(rot) => viewerItem && handleRotate(viewerItem.id, rot)}
           />
 
-          {/* List Section */}
-          <div className="space-y-4 not-italic">
-            <div className="flex items-center gap-3 px-2">
-              <ImageIcon className="w-5 h-5 text-blue-600" />
-              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 italic">Page Sequence ({images.length})</h3>
-            </div>
-            <div className="grid grid-cols-1 gap-3">
-              {images.map((img, idx) => (
-                <ImgItem 
-                  key={img.id} 
-                  img={img} 
-                  index={idx}
-                  isFirst={idx === 0}
-                  isLast={idx === images.length - 1}
-                  handleRotate={handleRotate}
-                  removeImg={removeImg} 
-                  handleMove={handleMove}
-                  onViewer={setViewerItem}
-                />
-              ))}
-            </div>
-          </div>
+          <FileGrid 
+            items={images}
+            onRemove={removeImg}
+            onMove={handleMove}
+            onRotate={handleRotate}
+            onPreview={setViewerItem}
+            onAddMore={handleFiles}
+            accept="image/*"
+            maxFiles={MAX_FILES}
+          />
         </div>
       )}
 
@@ -569,103 +532,5 @@ export default function ImgToPdfTool() {
         onCancel={() => blocker.reset?.()}
       />
     </div>
-  );
-}
-
-function ImgItem({ img, index, isFirst, isLast, handleRotate, removeImg, handleMove, onViewer }: { 
-  img: ImgData; 
-  index: number;
-  isFirst: boolean;
-  isLast: boolean;
-  handleRotate: (id: string) => void;
-  removeImg: (id: string) => void;
-  handleMove: (id: string, direction: 'up' | 'down') => void;
-  onViewer: (item: ImgData) => void;
-  key?: React.Key;
-}) {
-  const isProcessing = img.status === 'processing';
-
-  return (
-    <motion.div 
-      layout
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.9 }}
-      className={cn(
-        "group relative bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-3 flex items-center gap-4 transition-all hover:border-blue-500 hover:shadow-lg",
-        isProcessing && "opacity-70 border-blue-200 dark:border-blue-900/50 bg-blue-50/10"
-      )}
-    >
-      <div 
-        onClick={() => !isProcessing && onViewer(img)}
-        className={cn(
-          "relative w-24 aspect-[1/1.414] bg-neutral-50 dark:bg-neutral-800 rounded-lg overflow-hidden border border-neutral-100 dark:border-neutral-800 flex-shrink-0 flex items-center justify-center",
-          !isProcessing && "cursor-zoom-in"
-        )}
-      >
-        {isProcessing ? (
-          <div className="absolute inset-0 flex items-center justify-center bg-blue-500/5 backdrop-blur-[1px]">
-            <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
-          </div>
-        ) : (
-          <motion.img 
-            src={img.thumbnail} 
-            animate={{ 
-              rotate: img.rotation,
-              scale: img.rotation % 180 === 0 ? 1 : 0.707
-            }}
-            alt="Image Thumbnail" 
-            className="w-full h-full object-contain pointer-events-none" 
-          />
-        )}
-      </div>
-
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-[10px] font-black uppercase text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded">#{index + 1}</span>
-          <p className="text-sm font-bold truncate text-neutral-900 dark:text-neutral-100">{img.file.name}</p>
-          {isProcessing && (
-            <span className="text-[8px] font-black uppercase tracking-widest text-blue-500 animate-pulse">Processing...</span>
-          )}
-        </div>
-        
-        <div className="flex items-center gap-1">
-           <button 
-              disabled={isFirst || isProcessing}
-              onClick={() => handleMove(img.id, 'up')}
-              className="p-1.5 text-neutral-300 hover:text-blue-600 disabled:opacity-0 transition-all hover:bg-neutral-50 dark:hover:bg-neutral-800 rounded-lg"
-            >
-              <ArrowUp className="w-4 h-4" />
-            </button>
-            <button 
-              disabled={isLast || isProcessing}
-              onClick={() => handleMove(img.id, 'down')}
-              className="p-1.5 text-neutral-300 hover:text-blue-600 disabled:opacity-0 transition-all hover:bg-neutral-50 dark:hover:bg-neutral-800 rounded-lg"
-            >
-              <ArrowDown className="w-4 h-4" />
-            </button>
-            <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest ml-2">{formatBytes(img.file.size)}</span>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-1.5 pr-2">
-        <button 
-          disabled={isProcessing}
-          onClick={() => handleRotate(img.id)}
-          className="w-10 h-10 flex items-center justify-center bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:text-blue-600 hover:bg-white dark:hover:bg-neutral-700 transition-all rounded-xl shadow-sm border border-neutral-200/50 dark:border-neutral-700/50 disabled:opacity-50"
-          title="Rotate"
-        >
-          <RotateCw className="w-4 h-4" />
-        </button>
-        <button 
-          disabled={isProcessing}
-          onClick={() => removeImg(img.id)}
-          className="w-10 h-10 flex items-center justify-center bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-500 hover:text-white transition-all rounded-xl shadow-sm border border-red-200/50 dark:border-red-800/50 disabled:opacity-50"
-          title="Remove"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
-      </div>
-    </motion.div>
   );
 }

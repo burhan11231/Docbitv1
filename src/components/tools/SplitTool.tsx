@@ -86,17 +86,27 @@ export default function SplitTool() {
       const thumbs: string[] = [];
       const numToPreview = pdf.numPages;
       
+      const thumbCanvas = document.createElement('canvas'); // Reuse canvas
+      const thumbCtx = thumbCanvas.getContext('2d');
+
       for (let i = 1; i <= numToPreview; i++) {
-        const page = await pdf.getPage(i);
-        const viewport = page.getViewport({ scale: 0.3 });
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        if (context) {
-          canvas.height = viewport.height;
-          canvas.width = viewport.width;
-          await page.render({ canvasContext: context, canvas, viewport }).promise;
-          thumbs.push(canvas.toDataURL('image/jpeg', 0.8));
-          setThumbnails([...thumbs]);
+        try {
+          const page = await pdf.getPage(i);
+          const viewport = page.getViewport({ scale: 0.2 });
+          
+          if (thumbCtx) {
+            thumbCanvas.height = viewport.height;
+            thumbCanvas.width = viewport.width;
+            await page.render({ canvasContext: thumbCtx, canvas: thumbCanvas, viewport }).promise;
+            thumbs.push(thumbCanvas.toDataURL('image/jpeg', 0.6));
+            
+            if (i % 5 === 0 || i === numToPreview) {
+              setThumbnails([...thumbs]);
+              await new Promise(r => requestAnimationFrame(r));
+            }
+          }
+        } catch (err) {
+          console.error(`Page ${i} render failed:`, err);
         }
       }
     } catch (e) {
@@ -213,12 +223,24 @@ export default function SplitTool() {
       }
 
       setProcessingStage(`Extracting ${pagesToInclude.length} pages...`);
-      const copiedPages = await outPdf.copyPages(sourcePdf, pagesToInclude.map(p => p - 1));
-      copiedPages.forEach(p => outPdf.addPage(p));
+      // Process in smaller chunks to avoid freezing
+      const CHUNK_SIZE = 10;
+      for (let i = 0; i < pagesToInclude.length; i += CHUNK_SIZE) {
+        const chunk = pagesToInclude.slice(i, i + CHUNK_SIZE);
+        const copiedPages = await outPdf.copyPages(sourcePdf, chunk.map(p => p - 1));
+        copiedPages.forEach(p => outPdf.addPage(p));
+        
+        // Memory cleanup
+        (copiedPages as any) = null;
+
+        const currentProg = Math.round(((i + chunk.length) / pagesToInclude.length) * 100);
+        setProgress(currentProg);
+        await new Promise(r => requestAnimationFrame(r));
+      }
 
       setProcessingStage('Finalizing...');
       setProgress(100);
-      const pdfBytes = await outPdf.save();
+      const pdfBytes = await outPdf.save({ useObjectStreams: true });
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
       setResult({ url, size: blob.size });
@@ -260,6 +282,15 @@ export default function SplitTool() {
         ].filter(Boolean)}
       />
 
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 px-2">
+        <div className="space-y-2">
+          <h1 className="text-4xl md:text-5xl font-black tracking-tight text-neutral-900 dark:text-white uppercase italic">
+            Split <span className="text-blue-600">PDF</span> Pages
+          </h1>
+          <p className="text-sm font-bold uppercase tracking-widest text-neutral-400">Divide a PDF into separate files or extract specific pages easily.</p>
+        </div>
+      </div>
+
       <AnimatePresence mode="wait">
         {result && (
           <DownloadResult 
@@ -277,9 +308,9 @@ export default function SplitTool() {
          <Dropzone onFilesSelected={handleFiles} maxFiles={1} isProcessing={isLoadingFile} label="Split PDF Document" />
         ) : (
           <div className="space-y-8">
-            {/* Header section */}
+            {/* Header section moved to top */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 px-2">
-              <div className="space-y-2">
+              <div className="hidden">
                 <h1 className="text-3xl font-black flex items-center gap-3">
                   Split PDF Pages
                 </h1>

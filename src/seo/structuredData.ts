@@ -1,5 +1,5 @@
 
-import { APP_DOMAIN, SITE_NAME } from './seoConfig';
+import { APP_DOMAIN, SITE_NAME, GLOBAL_OG_IMAGE } from './seoConfig';
 
 export const getSoftwareAppSchema = (description: string) => {
   return {
@@ -7,9 +7,18 @@ export const getSoftwareAppSchema = (description: string) => {
     "@type": "SoftwareApplication",
     "name": SITE_NAME,
     "url": APP_DOMAIN,
+    "image": GLOBAL_OG_IMAGE,
     "applicationCategory": "UtilitiesApplication",
     "operatingSystem": "All",
     "description": description,
+    "publisher": {
+      "@type": "Organization",
+      "name": SITE_NAME,
+      "logo": {
+        "@type": "ImageObject",
+        "url": `${APP_DOMAIN}/logo.png`
+      }
+    },
     "offers": {
       "@type": "Offer",
       "price": "0",
@@ -24,9 +33,14 @@ export const getWebApplicationSchema = (name: string, description: string, url: 
     "@type": "WebApplication",
     "name": `${name} | ${SITE_NAME}`,
     "url": url,
+    "image": GLOBAL_OG_IMAGE,
     "applicationCategory": "UtilitiesApplication",
     "operatingSystem": "All",
     "description": description,
+    "publisher": {
+      "@type": "Organization",
+      "name": SITE_NAME
+    },
     "offers": {
       "@type": "Offer",
       "price": "0",

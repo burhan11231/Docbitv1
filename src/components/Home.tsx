@@ -179,9 +179,9 @@ export function Home() {
   className="text-5xl lg:text-8xl font-black tracking-tighter leading-[0.95] text-neutral-900 dark:text-white"
 >
   <span className="text-white dark:text-blue-400 italic drop-shadow-sm">
-    Fast. <br />
-    Secure. <br />
-    On Your Device.
+    All-In-One <br />
+    Free Online <br />
+    PDF Tools.
   </span>
 </motion.h1>
             
@@ -407,10 +407,10 @@ export function Home() {
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-neutral-100 dark:border-neutral-900 pb-8">
   <div className="space-y-2">
     <h2 className="text-4xl font-black tracking-tighter text-neutral-900 dark:text-white uppercase italic">
-      Choose a Tool
+      PDF Utility Toolkit
     </h2>
     <p className="text-neutral-500 dark:text-neutral-400 font-medium">
-      Convert, merge, split, and extract PDFs — all in one place, processed locally.
+      Merge, split, and convert your documents with precision and absolute privacy.
     </p>
   </div>
 </div>
@@ -449,6 +449,28 @@ export function Home() {
           </motion.div>
         </section>
 
+
+        {/* 🟨 FAQ SECTION */}
+        <section className="space-y-16 py-12 border-t border-neutral-100 dark:border-neutral-900">
+          <div className="text-center space-y-4">
+            <h2 className="text-4xl font-black tracking-tighter uppercase italic text-neutral-900 dark:text-white">Frequently Asked Questions</h2>
+            <p className="text-neutral-500 font-bold uppercase tracking-widest text-[10px]">Everything you need to know about DocBit</p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+            {[
+              { q: "Is DocBit really free?", a: "Yes, DocBit is completely free to use. There are no limits on how many files you can process, and we don't have any 'premium' tiers." },
+              { q: "How are my files handled?", a: "Unlike other tools, DocBit processes your files directly in your web browser. This means your documents never leave your computer or phone." },
+              { q: "Do I need to install anything?", a: "No installation is required. DocBit is a web-based platform that works on any modern browser including Chrome, Safari, and Firefox." },
+              { q: "Is it secure for sensitive data?", a: "Because of our on-device processing architecture, DocBit is one of the most secure ways to handle sensitive documents like contracts or medical records." }
+            ].map((faq, i) => (
+              <div key={i} className="p-8 bg-white dark:bg-neutral-950 border border-neutral-100 dark:border-neutral-800 rounded-[32px] space-y-4">
+                <h4 className="font-black text-neutral-900 dark:text-white uppercase italic tracking-tight">{faq.q}</h4>
+                <p className="text-neutral-500 dark:text-neutral-400 text-sm font-medium leading-relaxed">{faq.a}</p>
+              </div>
+            ))}
+          </div>
+        </section>
 
         
       </div>

@@ -85,17 +85,27 @@ export default function GrayscaleTool() {
       const thumbs: string[] = [];
       const numToThumbnail = pdf.numPages;
       
-      for (let i = 1; i <= numToThumbnail; i++) {
-        const page = await pdf.getPage(i);
-        const viewport = page.getViewport({ scale: 0.3 });
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        if (context) {
-          canvas.height = viewport.height;
-          canvas.width = viewport.width;
-          await page.render({ canvasContext: context, canvas, viewport }).promise;
-          thumbs.push(canvas.toDataURL('image/jpeg', 0.8));
-          setThumbnails([...thumbs]);
+      const thumbCanvas = document.createElement('canvas'); // Reuse canvas
+      const thumbCtx = thumbCanvas.getContext('2d');
+
+      for (let i = 0; i < numToThumbnail; i++) {
+        try {
+          const page = await pdf.getPage(i + 1);
+          const viewport = page.getViewport({ scale: 0.2 });
+          
+          if (thumbCtx) {
+            thumbCanvas.height = viewport.height;
+            thumbCanvas.width = viewport.width;
+            await page.render({ canvasContext: thumbCtx, canvas: thumbCanvas, viewport }).promise;
+            thumbs.push(thumbCanvas.toDataURL('image/jpeg', 0.6));
+            
+            if ((i + 1) % 5 === 0 || (i + 1) === numToThumbnail) {
+              setThumbnails([...thumbs]);
+              await new Promise(r => requestAnimationFrame(r));
+            }
+          }
+        } catch (err) {
+          console.error(`Page ${i + 1} thumbnail failed:`, err);
         }
       }
     } catch (e) {
@@ -211,6 +221,14 @@ export default function GrayscaleTool() {
           
           const newPage = outPdf.addPage([originalWidth, originalHeight]);
           newPage.drawImage(embeddedImg, { x: 0, y: 0, width: originalWidth, height: originalHeight });
+          
+          // Clear memory
+          (imgBytes as any) = null;
+          (embeddedImg as any) = null;
+          (imageData as any) = null;
+
+          // Yield to main thread
+          await new Promise(r => requestAnimationFrame(r));
         }
         canvas.width = 0; canvas.height = 0;
       }
@@ -255,6 +273,15 @@ export default function GrayscaleTool() {
         ].filter(Boolean)}
       />
 
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 px-2">
+        <div className="space-y-2">
+          <h1 className="text-4xl md:text-5xl font-black tracking-tight text-neutral-900 dark:text-white uppercase italic">
+            Grayscale <span className="text-blue-600">PDF</span> Converter
+          </h1>
+          <p className="text-sm font-bold uppercase tracking-widest text-neutral-400">Transform color PDF pages into print-friendly monochrome.</p>
+        </div>
+      </div>
+
       <AnimatePresence>
         {result && (
           <DownloadResult 
@@ -272,9 +299,9 @@ export default function GrayscaleTool() {
          <Dropzone onFilesSelected={handleFiles} maxFiles={1} isProcessing={isLoadingFile} label="Select PDF to Grayscale" />
         ) : (
           <div className="space-y-8">
-            {/* Header section */}
+            {/* Header section moved to top */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 px-2">
-              <div className="space-y-2">
+              <div className="hidden">
                 <h1 className="text-3xl font-black flex items-center gap-3">
                   Grayscale Configuration
                 </h1>

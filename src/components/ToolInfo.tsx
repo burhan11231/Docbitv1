@@ -49,8 +49,8 @@ export const ToolInfo: React.FC<ToolInfoProps> = ({
       {/* How It Works */}
       <section className="space-y-12">
         <div className="text-center space-y-4">
-          <h2 className="text-3xl font-black tracking-tight dark:text-white">How it works</h2>
-          <p className="text-neutral-500 font-medium">Simple 3-step process to get your {title} ready.</p>
+          <h2 className="text-3xl font-black tracking-tight dark:text-white uppercase italic">How it works</h2>
+          <p className="text-neutral-500 font-bold italic uppercase text-xs tracking-widest">Follow these steps to {title} instantly.</p>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -61,13 +61,13 @@ export const ToolInfo: React.FC<ToolInfoProps> = ({
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: idx * 0.1 }}
-              className="relative p-8 rounded-[32px] bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 shadow-sm"
+              className="relative p-8 rounded-[32px] bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 shadow-sm transition-all hover:scale-[1.02]"
             >
-              <div className="absolute -top-4 -left-4 w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-black text-xl shadow-lg shadow-blue-500/20">
+              <div className="absolute -top-4 -left-4 w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-black text-xl shadow-lg shadow-blue-500/20 italic">
                 {idx + 1}
               </div>
-              <h3 className="text-lg font-black dark:text-white mb-2 mt-2">{step.title}</h3>
-              <p className="text-neutral-500 text-sm font-medium leading-relaxed">{step.desc}</p>
+              <h3 className="text-lg font-black dark:text-white mb-2 mt-2 uppercase italic tracking-tight">{step.title}</h3>
+              <p className="text-neutral-500 text-sm font-medium leading-relaxed italic">{step.desc}</p>
             </motion.div>
           ))}
         </div>
@@ -76,8 +76,8 @@ export const ToolInfo: React.FC<ToolInfoProps> = ({
       {/* Benefits */}
       <section className="space-y-12">
         <div className="text-center space-y-4">
-          <h2 className="text-3xl font-black tracking-tight dark:text-white">Why use DocBit?</h2>
-          <p className="text-neutral-500 font-medium">Experience the next generation of PDF management.</p>
+          <h2 className="text-3xl font-black tracking-tight dark:text-white uppercase italic">Why use DocBit?</h2>
+          <p className="text-neutral-500 font-bold italic uppercase text-xs tracking-widest">A better way to handle your documents.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
@@ -90,11 +90,11 @@ export const ToolInfo: React.FC<ToolInfoProps> = ({
               transition={{ delay: idx * 0.1 }}
               className="space-y-4"
             >
-              <div className="w-16 h-16 mx-auto rounded-3xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600">
+              <div className="w-16 h-16 mx-auto rounded-3xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 border border-blue-100 dark:border-blue-800 shadow-sm">
                 {benefit.icon}
               </div>
-              <h3 className="text-xl font-black dark:text-white">{benefit.title}</h3>
-              <p className="text-neutral-500 text-sm font-medium leading-relaxed">{benefit.desc}</p>
+              <h3 className="text-xl font-black dark:text-white uppercase italic tracking-tighter">{benefit.title}</h3>
+              <p className="text-neutral-500 text-sm font-medium leading-relaxed italic">{benefit.desc}</p>
             </motion.div>
           ))}
         </div>

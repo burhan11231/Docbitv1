@@ -33,25 +33,25 @@ export const ToolContent: React.FC<ToolContentProps> = ({ toolId, toolName, tool
         <div className="text-center space-y-4">
           <h2 className="text-4xl font-black text-neutral-900 dark:text-white tracking-tight leading-none uppercase italic">The DocBit Advantage for {toolName}</h2>
           <p className="text-neutral-500 dark:text-neutral-400 font-medium text-lg max-w-2xl mx-auto italic uppercase">
-            Security. Velocity. Sovereignty.
+            Private. Local. Fast.
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
           {[
             {
-              title: "Sovereign Privacy",
-              desc: "Traditional tools are data silos. DocBit is a processing engine that executes entirely on your device, ensuring zero server-side exposure.",
+              title: "On-Device Privacy",
+              desc: "Traditional online tools store your files in the cloud. DocBit processes everything entirely on your computer or phone, so your documents never leave your side.",
               icon: <Lock className="w-10 h-10 text-blue-600" />
             },
             {
-              title: "Hardware Velocity",
-              desc: "Eliminate the upload-bottleneck. Our WebAssembly engine leverages your device's native CPU for near-instant processing.",
+              title: "Native Performance",
+              desc: "By removing the need to upload large files, we eliminate the wait. Our engine uses your device's own power to process documents instantly.",
               icon: <Zap className="w-10 h-10 text-amber-500" />
             },
             {
-              title: "Encrypted Workflow",
-              desc: "All document manipulation happens in a transient memory stack. Once the browser session ends, no data remains.",
+              title: "Secure Sessions",
+              desc: "Processing happens in a temporary memory stack. Once you close the tab, the data is gone forever—leaving zero footprints.",
               icon: <Shield className="w-10 h-10 text-emerald-500" />
             }
           ].map((item, i) => (
@@ -68,12 +68,12 @@ export const ToolContent: React.FC<ToolContentProps> = ({ toolId, toolName, tool
       <section className="relative">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 ring-1 ring-neutral-200 dark:ring-neutral-800 rounded-[48px] overflow-hidden bg-white dark:bg-neutral-950 shadow-2xl shadow-black/5 items-stretch">
           <div className="md:col-span-7 p-12 lg:p-20 flex flex-col justify-center space-y-8 border-b md:border-b-0 md:border-r border-neutral-100 dark:border-neutral-800">
-            <h3 className="text-4xl font-black text-neutral-900 dark:text-white leading-none uppercase italic tracking-tighter">Zero-Trust Architecture</h3>
+            <h3 className="text-4xl font-black text-neutral-900 dark:text-white leading-none uppercase italic tracking-tighter">Private by Architecture</h3>
             <p className="text-neutral-500 dark:text-neutral-400 text-lg leading-relaxed font-medium">
-              DocBit represents a paradigm shift in document utility services. By utilizing the latest WebAssembly (WASM) binary format, we execute complex PDF manipulation algorithms with near-native performance—directly inside your browser. No files are ever uploaded, ensuring GDPR, HIPAA, and proprietary data compliance by design.
+              DocBit changes how you use document tools. By processing files directly in your browser using modern web standards, we ensure that sensitive information like contracts, medical records, or personal photos stay strictly on your system. 
             </p>
             <div className="flex flex-wrap gap-4 pt-4">
-              {['WASM Native', 'No Cloud Storage', 'On-Device Cache', 'Bit-Perfect Conversion'].map(tag => (
+              {['Browser-Native', 'Local Processing', 'Private by Default', 'Free & Open'].map(tag => (
                 <span key={tag} className="px-5 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-400 text-[10px] font-black uppercase tracking-widest">{tag}</span>
               ))}
             </div>
@@ -84,14 +84,14 @@ export const ToolContent: React.FC<ToolContentProps> = ({ toolId, toolName, tool
             <div className="relative z-10 space-y-8">
               <Cpu className="w-16 h-16 text-blue-500" />
               <div className="space-y-4">
-                <h4 className="text-2xl font-black text-white leading-tight uppercase italic">Unlimited Performance</h4>
+                <h4 className="text-2xl font-black text-white leading-tight uppercase italic">Built for Speed</h4>
                 <p className="text-neutral-400 font-medium text-sm leading-relaxed">
-                  "By moving the compute-layer to the client, we eliminate server queues and subscription barriers. DocBit is built to be fast, free, and secure forever."
+                  "By letting your browser handle the work directly, we eliminate the need for server queues or file uploads. DocBit is designed to be free, private, and fast—without any barriers."
                 </p>
               </div>
               <div className="flex items-center gap-4 text-xs font-black uppercase tracking-widest text-blue-500">
                 <Globe className="w-4 h-4" />
-                Edge Processing Enabled
+                Local Execution Active
               </div>
             </div>
           </div>
@@ -129,7 +129,7 @@ export const ToolContent: React.FC<ToolContentProps> = ({ toolId, toolName, tool
                 <Lock className="w-14 h-14 text-blue-600 mb-8" />
                 <h4 className="text-2xl font-black text-neutral-900 dark:text-white mb-4 uppercase italic">End-to-End Local Integrity</h4>
                 <p className="text-neutral-500 dark:text-neutral-400 leading-relaxed font-bold text-sm">
-                  Document processing shouldn't require trust—it should require architecture that makes trust unnecessary. DocBit establishes a new standard for web-based document residency.
+                  We believe document processing shouldn't come with a privacy trade-off. Our architecture ensures that even we can't see your data—because it never leaves your computer.
                 </p>
              </div>
           </div>

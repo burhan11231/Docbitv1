@@ -96,11 +96,18 @@ function generateSchemas(route: any) {
     schemas.push(getSoftwareAppSchema(config.description));
     schemas.push(getWebSiteSchema());
     schemas.push(getBreadcrumbSchema([{ name: 'Home', item: APP_DOMAIN }]));
+    schemas.push(getFAQSchema([
+      { q: "Is DocBit really free?", a: "Yes, DocBit is completely free to use. There are no limits on how many files you can process, and we don't have any 'premium' tiers." },
+      { q: "How are my files handled?", a: "Unlike other tools, DocBit processes your files directly in your web browser. This means your documents never leave your computer or phone." },
+      { q: "Do I need to install anything?", a: "No installation is required. DocBit is a web-based platform that works on any modern browser including Chrome, Safari, and Firefox." },
+      { q: "Is it secure for sensitive data?", a: "Because of our on-device processing architecture, DocBit is one of the most secure ways to handle sensitive documents like contracts or medical records." }
+    ]));
   } else {
     // Breadcrumb for all non-home pages
+    const pageTitle = route.config.title.includes(' | ') ? route.config.title.split(' | ')[0].trim() : route.config.title.split(' – ')[0].trim();
     schemas.push(getBreadcrumbSchema([
       { name: 'Home', item: APP_DOMAIN },
-      { name: route.config.title.split('|')[0].trim(), item: config.canonical }
+      { name: pageTitle, item: config.canonical }
     ]));
 
     if (type === 'tool' && toolData) {
@@ -117,6 +124,94 @@ function generateSchemas(route: any) {
   return schemas;
 }
 
+function generateSemanticBody(route: any) {
+  const { config, type, toolData } = route;
+  const siteName = SITE_NAME;
+  let body = '';
+
+  const h1 = config.title.includes(' | ') ? config.title.split(' | ')[0].trim() : config.title.includes(' – ') ? config.title.split(' – ')[0].trim() : config.title;
+
+  if (type === 'home') {
+    body = `
+      <header>
+        <nav>
+          <a href="/">Home</a>
+          <a href="/about">About</a>
+          <a href="/tools/merge-pdf">Merge PDF</a>
+          <a href="/tools/split-pdf">Split PDF</a>
+        </nav>
+        <h1>Free Online PDF Tools - Secure, Fast & Private</h1>
+        <p>DocBit is your all-in-one PDF utility platform. Process your documents directly in your browser with absolute privacy and native speed. No uploads, no server logs, 100% private.</p>
+      </header>
+      <main>
+        <section>
+          <h2>Professional PDF Toolkit</h2>
+          <p>We provide high-quality document conversion and editing tools designed for speed and security. Our browser-native engine ensures that sensitive information never leaves your side.</p>
+          <ul>
+            <li><strong>Merge PDF</strong>: Combine multiple PDF files into one clean document.</li>
+            <li><strong>Split PDF</strong>: Extract specific pages or divide a large PDF into smaller files.</li>
+            <li><strong>Image to PDF</strong>: Convert photos (JPG, PNG) into organized PDF documents.</li>
+            <li><strong>PDF to Image</strong>: Export PDF pages as high-quality images for easy sharing.</li>
+            <li><strong>Grayscale PDF</strong>: Convert color documents to monochrome for efficient printing.</li>
+          </ul>
+        </section>
+        <section>
+          <h2>The DocBit Advantage</h2>
+          <p>Unlike traditional online tools, DocBit processes everything on your device. This means faster speeds (no upload time) and guaranteed privacy for your medical records, contracts, and personal photos.</p>
+        </section>
+      </main>
+      <footer>
+        <p>© ${new Date().getFullYear()} ${siteName}. Fast, Free, and Secure.</p>
+        <a href="/privacy">Privacy Policy</a>
+        <a href="/terms">Terms of Service</a>
+        <a href="/contact">Contact</a>
+      </footer>
+    `;
+  } else if (type === 'tool' && toolData) {
+    body = `
+      <header>
+        <nav><a href="/">← Back to Home</a></nav>
+        <h1>${h1}</h1>
+        <p>${config.description}</p>
+      </header>
+      <main>
+        <article>
+          <h2>About ${toolData.name}</h2>
+          <p>${toolData.description}</p>
+          ${toolData.steps ? `
+            <h3>How to use ${toolData.name} in 4 simple steps</h3>
+            <ol>
+              ${toolData.steps.map((s: any) => `<li><strong>${s.name}</strong>: ${s.text}</li>`).join('')}
+            </ol>
+          ` : ''}
+          ${toolData.faqs ? `
+            <h3>Frequently Asked Questions</h3>
+            ${toolData.faqs.map((f: any) => `<div><h4>${f.q}</h4><p>${f.a}</p></div>`).join('')}
+          ` : ''}
+        </article>
+      </main>
+      <footer>
+        <p>Processed locally on your device by ${siteName}.</p>
+      </footer>
+    `;
+  } else {
+    body = `
+      <header>
+        <nav><a href="/">← Back to Home</a></nav>
+        <h1>${h1}</h1>
+        <p>${config.description}</p>
+      </header>
+      <main>
+        <p>DocBit is dedicated to providing high-quality, private document tools for everyone. Learn more about our mission on our About page.</p>
+      </main>
+    `;
+  }
+
+  // Wrap in a hidden div to avoid flashing during hydration if needed, 
+  // but for SEO we want it visible in the source.
+  return `<div id="root">${body}</div>`;
+}
+
 console.log('Starting True Static Route Generation...');
 
 routes.forEach((route) => {
@@ -130,30 +225,31 @@ routes.forEach((route) => {
   // Use a fresh copy of the naked template for every route
   let html = nakedTemplate.slice(); 
 
-  // Inject Meta Tags before </head>
+  // Inject Meta Tags after charset/viewport for best crawler compatibility
   const metaTags = `
-    <title>${fullTitle}</title>
-    <meta name="description" content="${config.description}" />
-    <meta name="keywords" content="${config.keywords || (Array.isArray(config.keywords) ? config.keywords.join(', ') : config.keywords) || ''}" />
-    <link rel="canonical" href="${config.canonical}" />
+    <title data-rh="true">${fullTitle}</title>
+    <meta data-rh="true" name="title" content="${fullTitle}" />
+    <meta data-rh="true" name="description" content="${config.description}" />
+    <meta data-rh="true" name="keywords" content="${config.keywords || (Array.isArray(config.keywords) ? config.keywords.join(', ') : config.keywords) || ''}" />
+    <link data-rh="true" rel="canonical" href="${config.canonical}" />
 
     <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="${config.canonical}" />
-    <meta property="og:title" content="${fullTitle}" />
-    <meta property="og:description" content="${config.description}" />
-    <meta property="og:image" content="${finalOgImage}" />
-    <meta property="og:image:secure_url" content="${finalOgImage}" />
-    <meta property="og:site_name" content="${SITE_NAME}" />
-    <meta property="og:locale" content="en_IN" />
+    <meta data-rh="true" property="og:type" content="website" />
+    <meta data-rh="true" property="og:url" content="${config.canonical}" />
+    <meta data-rh="true" property="og:title" content="${fullTitle}" />
+    <meta data-rh="true" property="og:description" content="${config.description}" />
+    <meta data-rh="true" property="og:image" content="${finalOgImage}" />
+    <meta data-rh="true" property="og:image:secure_url" content="${finalOgImage}" />
+    <meta data-rh="true" property="og:site_name" content="${SITE_NAME}" />
+    <meta data-rh="true" property="og:locale" content="en_IN" />
 
     <!-- Twitter -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:url" content="${config.canonical}" />
-    <meta name="twitter:title" content="${fullTitle}" />
-    <meta name="twitter:description" content="${config.description}" />
-    <meta name="twitter:image" content="${finalOgImage}" />
-    <meta name="twitter:site" content="@DocBit_In" />
+    <meta data-rh="true" name="twitter:card" content="summary_large_image" />
+    <meta data-rh="true" name="twitter:url" content="${config.canonical}" />
+    <meta data-rh="true" name="twitter:title" content="${fullTitle}" />
+    <meta data-rh="true" name="twitter:description" content="${config.description}" />
+    <meta data-rh="true" name="twitter:image" content="${finalOgImage}" />
+    <meta data-rh="true" name="twitter:site" content="@DocBit_In" />
 
     <!-- Structured Data -->
     ${(() => {
@@ -172,8 +268,16 @@ routes.forEach((route) => {
     })()}
   `;
 
-  // Inject at the top of the head for best crawler compatibility
-  html = html.replace('<head>', `<head>\n    ${metaTags}`);
+  // Inject after viewport meta tag to keep charset at the very top
+  if (html.includes('viewport" content="width=device-width, initial-scale=1.0" />')) {
+    html = html.replace('viewport" content="width=device-width, initial-scale=1.0" />', 'viewport" content="width=device-width, initial-scale=1.0" />' + `\n    ${metaTags}`);
+  } else {
+    html = html.replace('<head>', `<head>\n    ${metaTags}`);
+  }
+
+  // Inject Semantic Body for SEO and AI Overviews
+  const semanticBody = generateSemanticBody(route);
+  html = html.replace('<div id="root"></div>', semanticBody);
 
   // 3. Save to file
   const relativePath = route.path === '/' ? 'index.html' : path.join(route.path.startsWith('/') ? route.path.substring(1) : route.path, 'index.html');
@@ -193,12 +297,12 @@ console.log('\nGenerating Split Sitemaps...');
 const today = new Date().toISOString().split('T')[0];
 
 const generateSitemapXml = (routes: any[]) => `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
 ${routes.map(route => `  <url>
     <loc>${route.config.canonical}</loc>
     <lastmod>${today}</lastmod>
     <changefreq>${route.type === 'tool' || route.type === 'home' ? 'weekly' : 'monthly'}</changefreq>
-    <priority>${route.type === 'home' ? '1.0' : route.type === 'tool' ? '0.9' : '0.7'}</priority>
+    <priority>${route.type === 'home' ? '1.0' : route.type === 'tool' ? '0.9' : '0.8'}</priority>
   </url>`).join('\n')}
 </urlset>`;
 
@@ -219,7 +323,7 @@ const toolsXml = generateSitemapXml(toolsRoutes);
 
 // Generate Sitemap Index
 const sitemapIndex = `<?xml version="1.0" encoding="UTF-8"?>
-<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/siteindex.xsd">
   <sitemap>
     <loc>${APP_DOMAIN}/sitemap-pages.xml</loc>
     <lastmod>${today}</lastmod>

@@ -3,9 +3,20 @@ import { motion } from 'motion/react';
 import { Shield, ArrowLeft, ShoppingBag } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+import { SEO } from './SEO';
+import { SEO_CONFIG, APP_DOMAIN } from '../seo/seoConfig';
+import { getBreadcrumbSchema } from '../seo/structuredData';
+
 export default function PrivacyPolicy() {
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-black py-20 px-4">
+      <SEO 
+        {...SEO_CONFIG.privacy} 
+        schema={getBreadcrumbSchema([
+          { name: 'Home', item: APP_DOMAIN },
+          { name: 'Privacy Policy', item: SEO_CONFIG.privacy.canonical }
+        ])}
+      />
       <div className="max-w-4xl mx-auto space-y-12">
         
         {/* Header */}
@@ -21,8 +32,9 @@ export default function PrivacyPolicy() {
             Privacy <span className="text-blue-600 underline">Policy</span>
           </h1>
           <p className="text-neutral-500 dark:text-neutral-400 font-bold max-w-2xl text-lg">
-            Effective Date: May 3, 2024
+            Your privacy isn't a feature—it's the foundation of DocBit. 
           </p>
+          <p className="text-xs text-neutral-400 font-bold uppercase tracking-widest">Effective Date: May 3, 2024</p>
         </div>
 
         {/* Main Content */}

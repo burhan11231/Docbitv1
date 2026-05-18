@@ -317,6 +317,15 @@ export default function PdfToImgTool() {
         ].filter(Boolean)}
       />
 
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 px-2">
+        <div className="space-y-2">
+          <h1 className="text-4xl md:text-5xl font-black tracking-tight text-neutral-900 dark:text-white uppercase italic">
+            Convert <span className="text-blue-600">PDF</span> to Images
+          </h1>
+          <p className="text-sm font-bold uppercase tracking-widest text-neutral-400">Extract pages from your PDF as high-quality images.</p>
+        </div>
+      </div>
+
       <AnimatePresence>
         {result && (
           <DownloadResult 
@@ -340,9 +349,9 @@ export default function PdfToImgTool() {
         />
       ) : (
         <div className="space-y-8">
-            {/* Header section */}
+            {/* Header section moved to top */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 px-2">
-              <div className="space-y-2">
+              <div className="hidden">
                 <h1 className="text-3xl font-black flex items-center gap-3">
                   Convert PDF to Images
                 </h1>
@@ -578,6 +587,13 @@ export default function PdfToImgTool() {
                  </>
                )}
             </div>
+
+            <ImageViewer 
+              src={highResViewerImage || viewerImg || ''} 
+              isOpen={!!viewerImg} 
+              loading={isRenderingViewer}
+              onClose={() => { setViewerImg(null); setHighResViewerImage(null); }} 
+            />
           </div>
         )}
       <ToolContent 
